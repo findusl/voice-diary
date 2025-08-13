@@ -1,15 +1,35 @@
 package de.lehrbaum.voiry.ui
 
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.material3.*
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.HorizontalDivider
-import androidx.compose.runtime.*
+import androidx.compose.material3.ListItem
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBar
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import de.lehrbaum.voiry.audio.AudioRecorder
+import de.lehrbaum.voiry.audio.Recorder
+import de.lehrbaum.voiry.audio.platformRecorder
 import de.lehrbaum.voiry.recordings.MockRecordingRepository
 import de.lehrbaum.voiry.recordings.Recording
 import de.lehrbaum.voiry.recordings.RecordingRepository
@@ -19,19 +39,17 @@ import kotlinx.coroutines.launch
 @Composable
 fun MainScreen(
     repository: RecordingRepository = remember { MockRecordingRepository() },
-    enableRecording: Boolean = true,
+    recorder: Recorder = platformRecorder,
 ) {
     val scope = rememberCoroutineScope()
     var recordings by remember { mutableStateOf<List<Recording>>(emptyList()) }
     var loading by remember { mutableStateOf(true) }
     var error by remember { mutableStateOf<String?>(null) }
-
-    val recorder: AudioRecorder? = remember(enableRecording) { if (enableRecording) AudioRecorder() else null }
     var isRecording by remember { mutableStateOf(false) }
 
     DisposableEffect(recorder) {
         onDispose {
-            try { recorder?.close() } catch (_: Throwable) {}
+            try { recorder.close() } catch (_: Throwable) {}
         }
     }
 
@@ -47,35 +65,36 @@ fun MainScreen(
             TopAppBar(title = { Text("Voice Diary") })
         },
         floatingActionButton = {
-            ExtendedFloatingActionButton(
-                onClick = {
-                    if (recorder?.isAvailable != true) return@ExtendedFloatingActionButton
-                    if (!isRecording) {
-                        runCatching { recorder.startRecording() }
-                        isRecording = true
-                    } else {
-                        scope.launch {
-                            val stopResult = recorder.stopRecording()
-                            stopResult.onSuccess { buffer ->
-                                // Save to server (mock)
-                                runCatching { repository.saveRecording(buffer) }
-                                    .onSuccess { newRec ->
-                                        recordings = listOf(newRec) + recordings
-                                        isRecording = false
-                                    }
-                                    .onFailure { e ->
-                                        error = e.message
-                                        isRecording = false
-                                    }
-                            }.onFailure { e ->
-                                error = e.message
-                                isRecording = false
+            if (recorder.isAvailable) {
+                ExtendedFloatingActionButton(
+                    onClick = {
+                        if (!isRecording) {
+                            runCatching { recorder.startRecording() }
+                            isRecording = true
+                        } else {
+                            scope.launch {
+                                val stopResult = recorder.stopRecording()
+                                stopResult.onSuccess { buffer ->
+                                    // Save to server (mock)
+                                    runCatching { repository.saveRecording(buffer) }
+                                        .onSuccess { newRec ->
+                                            recordings = listOf(newRec) + recordings
+                                            isRecording = false
+                                        }
+                                        .onFailure { e ->
+                                            error = e.message
+                                            isRecording = false
+                                        }
+                                }.onFailure { e ->
+                                    error = e.message
+                                    isRecording = false
+                                }
                             }
                         }
                     }
+                ) {
+                    Text(if (isRecording) "Stop" else "Record")
                 }
-            ) {
-                Text(if (isRecording) "Stop" else "Record")
             }
         }
     ) { padding ->
@@ -84,7 +103,7 @@ fun MainScreen(
                 .padding(padding)
                 .fillMaxSize()
         ) {
-            if (recorder?.isAvailable != true) {
+            if (!recorder.isAvailable) {
                 InfoBanner("Audio recorder not available on this platform/device.")
             }
             if (error != null) {
