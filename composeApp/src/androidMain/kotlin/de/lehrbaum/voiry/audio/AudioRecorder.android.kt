@@ -2,17 +2,18 @@ package de.lehrbaum.voiry.audio
 
 import kotlinx.io.Buffer
 
-actual class AudioRecorder actual constructor() {
-	actual val isAvailable = false
+class AudioRecorder constructor() : Recorder {
+	override val isAvailable = false
 
-	actual fun startRecording() {
-		TODO("Not yet implemented")
+	override fun startRecording() {
+		// Not implemented on Android yet
 	}
 
-	actual fun stopRecording(): Result<Buffer> {
-		TODO("Not yet implemented")
+	override fun stopRecording(): Result<Buffer> {
+		return Result.failure(UnsupportedOperationException("Not implemented on Android yet"))
 	}
 
-	actual fun close() {
+	override fun close() {
+		// no-op
 	}
 }

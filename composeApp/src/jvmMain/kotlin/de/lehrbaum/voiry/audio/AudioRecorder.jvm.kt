@@ -19,12 +19,12 @@ import kotlinx.io.asOutputStream
 
 private const val TAG = "AudioRecorder"
 
-actual class AudioRecorder : AutoCloseable, CoroutineScope {
+class AudioRecorder : AutoCloseable, CoroutineScope, Recorder {
 	override val coroutineContext: Job = SupervisorJob()
 	private lateinit var line: TargetDataLine
 	private lateinit var format: AudioFormat
 	private var _isAvailable = false
-	actual val isAvailable: Boolean
+	override val isAvailable: Boolean
 		get() = _isAvailable
 	private var recordingStream: ByteArrayOutputStream? = null
 	private var isRecording = false
@@ -58,7 +58,7 @@ actual class AudioRecorder : AutoCloseable, CoroutineScope {
 	}
 
 	// Start recording audio
-	actual fun startRecording() {
+	override fun startRecording() {
 		isRecording = true
 		if (!line.isOpen) {
 			line.open(format)
@@ -85,7 +85,7 @@ actual class AudioRecorder : AutoCloseable, CoroutineScope {
 	}
 
 	// Stop recording and return the audio data
-	actual fun stopRecording(): Result<Buffer> {
+	override fun stopRecording(): Result<Buffer> {
 		if (!isRecording) return Result.failure(IllegalStateException("AudioRecorder is not recording"))
 		isRecording = false
 		line.stop()
@@ -105,7 +105,7 @@ actual class AudioRecorder : AutoCloseable, CoroutineScope {
 		return out
 	}
 
-	actual override fun close() {
+	override fun close() {
 		line.close()
 		recordingStream?.close()
 		recordingStream = null
