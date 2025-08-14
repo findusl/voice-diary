@@ -9,8 +9,8 @@ import de.lehrbaum.voiry.ui.MainScreen
 
 @Composable
 @Preview
-fun App() {
+fun App(onRequestAudioPermission: (() -> Unit)? = null) {
     MaterialTheme {
-        MainScreen()
+        MainScreen(onRequestAudioPermission = onRequestAudioPermission)
     }
 }
