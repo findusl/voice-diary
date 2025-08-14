@@ -5,6 +5,9 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.CircularProgressIndicator
@@ -17,6 +20,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -40,6 +44,7 @@ import kotlinx.coroutines.launch
 fun MainScreen(
     repository: RecordingRepository = remember { MockRecordingRepository() },
     recorder: Recorder = platformRecorder,
+    onRequestAudioPermission: (() -> Unit)? = null,
 ) {
     val scope = rememberCoroutineScope()
     var recordings by remember { mutableStateOf<List<Recording>>(emptyList()) }
@@ -69,8 +74,14 @@ fun MainScreen(
                 ExtendedFloatingActionButton(
                     onClick = {
                         if (!isRecording) {
-                            runCatching { recorder.startRecording() }
-                            isRecording = true
+                            val result = runCatching { recorder.startRecording() }
+                            result.onSuccess {
+                                isRecording = true
+                                error = null
+                            }.onFailure { e ->
+                                isRecording = false
+                                error = e.message ?: "Failed to start recording"
+                            }
                         } else {
                             scope.launch {
                                 val stopResult = recorder.stopRecording()
@@ -107,7 +118,12 @@ fun MainScreen(
                 InfoBanner("Audio recorder not available on this platform/device.")
             }
             if (error != null) {
-                InfoBanner("Error: $error")
+                val permissionRelated = error?.contains("permission", ignoreCase = true) == true && onRequestAudioPermission != null
+                InfoBanner(
+                    text = "Error: $error",
+                    actionLabel = if (permissionRelated) "Grant permission" else null,
+                    onAction = if (permissionRelated) onRequestAudioPermission else null,
+                )
             }
             when {
                 loading -> {
@@ -145,8 +161,19 @@ private fun RecordingRow(rec: Recording) {
 }
 
 @Composable
-private fun InfoBanner(text: String) {
+private fun InfoBanner(text: String, actionLabel: String? = null, onAction: (() -> Unit)? = null) {
     Surface(color = MaterialTheme.colorScheme.surfaceVariant) {
-        Text(text, modifier = Modifier.padding(12.dp))
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(12.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(text, modifier = Modifier.weight(1f))
+            if (actionLabel != null && onAction != null) {
+                TextButton(onClick = onAction) { Text(actionLabel) }
+            }
+        }
     }
 }
