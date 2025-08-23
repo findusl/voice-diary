@@ -3,7 +3,8 @@ package de.lehrbaum.voiry
 import androidx.compose.ui.window.Window
 import androidx.compose.ui.window.application
 
-fun main(): Unit =
+fun main() {
+	initLogging()
 	application {
 		Window(
 			onCloseRequest = ::exitApplication,
@@ -12,3 +13,4 @@ fun main(): Unit =
 			App()
 		}
 	}
+}

@@ -2,11 +2,13 @@ package de.lehrbaum.voiry.api.v1
 
 import de.lehrbaum.voiry.DiaryEventProvider
 import de.lehrbaum.voiry.DiaryService
+import de.lehrbaum.voiry.initLogging
 import de.lehrbaum.voiry.module
 import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
 import io.ktor.client.plugins.sse.SSE
 import io.ktor.serialization.kotlinx.json.json
 import io.ktor.server.testing.testApplication
+import kotlin.test.BeforeTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
@@ -18,6 +20,11 @@ import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.runBlocking
 
 class DiaryClientTest {
+	@BeforeTest
+	fun setupLogging() {
+		initLogging()
+	}
+
 	@Test
 	fun `client receives updates and handles duplicates`() =
 		testApplication {
