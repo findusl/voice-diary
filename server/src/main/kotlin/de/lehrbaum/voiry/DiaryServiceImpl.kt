@@ -14,6 +14,8 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.emitAll
 import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 
 @ExperimentalUuidApi
 @ExperimentalTime
@@ -23,23 +25,30 @@ class DiaryServiceImpl private constructor(
 ) : DiaryService {
 	private val entries = ConcurrentHashMap(initialEntries.associateBy { it.id })
 	private val events = MutableSharedFlow<DiaryEvent>(extraBufferCapacity = 64)
+	private val mutex = Mutex()
 
 	override fun eventFlow(): Flow<DiaryEvent> =
 		flow {
-			emit(DiaryEvent.EntriesSnapshot(entries.values.toList()))
+			mutex.withLock {
+				emit(DiaryEvent.EntriesSnapshot(entries.values.toList()))
+			}
 			emitAll(events)
 		}
 
 	override suspend fun addEntry(entry: VoiceDiaryEntry, audio: ByteArray) {
-		entries[entry.id] = entry
-		repository.add(entry, audio)
-		events.emit(DiaryEvent.EntryCreated(entry))
+		mutex.withLock {
+			entries[entry.id] = entry
+			repository.add(entry, audio)
+			events.emit(DiaryEvent.EntryCreated(entry))
+		}
 	}
 
 	override suspend fun deleteEntry(id: Uuid) {
-		if (entries.remove(id) != null) {
-			repository.delete(id)
-			events.emit(DiaryEvent.EntryDeleted(id))
+		mutex.withLock {
+			if (entries.remove(id) != null) {
+				repository.delete(id)
+				events.emit(DiaryEvent.EntryDeleted(id))
+			}
 		}
 	}
 
@@ -49,25 +58,32 @@ class DiaryServiceImpl private constructor(
 		transcriptionStatus: TranscriptionStatus,
 		transcriptionUpdatedAt: Instant?,
 	) {
-		val current = entries[id] ?: return
-		val updated = current.copy(
-			transcriptionText = transcriptionText,
-			transcriptionStatus = transcriptionStatus,
-			transcriptionUpdatedAt = transcriptionUpdatedAt,
-		)
-		entries[id] = updated
-		repository.updateTranscription(id, transcriptionText, transcriptionStatus, transcriptionUpdatedAt)
-		events.emit(
-			DiaryEvent.TranscriptionUpdated(
+		mutex.withLock {
+			val current = entries[id] ?: return@withLock
+			val updated = current.copy(
+				transcriptionText = transcriptionText,
+				transcriptionStatus = transcriptionStatus,
+				transcriptionUpdatedAt = transcriptionUpdatedAt,
+			)
+			entries[id] = updated
+			repository.updateTranscription(
 				id,
 				transcriptionText,
 				transcriptionStatus,
 				transcriptionUpdatedAt,
-			),
-		)
+			)
+			events.emit(
+				DiaryEvent.TranscriptionUpdated(
+					id,
+					transcriptionText,
+					transcriptionStatus,
+					transcriptionUpdatedAt,
+				),
+			)
+		}
 	}
 
-	override suspend fun getAudio(id: Uuid): ByteArray? = repository.getAudio(id)
+	override suspend fun getAudio(id: Uuid): ByteArray? = mutex.withLock { repository.getAudio(id) }
 
 	companion object Companion {
 		suspend fun create(repository: DiaryRepository = DiaryRepository.create()): DiaryServiceImpl {
