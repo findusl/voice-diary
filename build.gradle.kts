@@ -14,4 +14,10 @@ plugins {
 
 allprojects {
 	apply(plugin = rootProject.libs.plugins.ktlint.get().pluginId)
+
+	ktlint {
+		filter {
+			exclude("**/generated/**")
+		}
+	}
 }
