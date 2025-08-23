@@ -3,55 +3,27 @@ package de.lehrbaum.voiry
 import de.lehrbaum.voiry.api.v1.DiaryEvent
 import de.lehrbaum.voiry.api.v1.TranscriptionStatus
 import de.lehrbaum.voiry.api.v1.VoiceDiaryEntry
-import java.util.concurrent.ConcurrentHashMap
+import kotlin.time.ExperimentalTime
+import kotlin.time.Instant
+import kotlin.uuid.ExperimentalUuidApi
+import kotlin.uuid.Uuid
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.MutableSharedFlow
-import kotlinx.coroutines.flow.emitAll
-import kotlinx.coroutines.flow.flow
 
-class DiaryService : DiaryEventProvider {
-	private val entries = ConcurrentHashMap<String, VoiceDiaryEntry>()
-	private val events = MutableSharedFlow<DiaryEvent>(extraBufferCapacity = 64)
+@ExperimentalUuidApi
+@ExperimentalTime
+interface DiaryService {
+	fun eventFlow(): Flow<DiaryEvent>
 
-	override fun eventFlow(): Flow<DiaryEvent> =
-		flow {
-			emit(DiaryEvent.EntriesSnapshot(entries.values.toList()))
-			emitAll(events)
-		}
+	suspend fun addEntry(entry: VoiceDiaryEntry, audio: ByteArray)
 
-	fun getAll(): List<VoiceDiaryEntry> = entries.values.toList()
-
-	suspend fun addEntry(entry: VoiceDiaryEntry) {
-		entries[entry.id] = entry
-		events.emit(DiaryEvent.EntryCreated(entry))
-	}
-
-	suspend fun deleteEntry(id: String) {
-		if (entries.remove(id) != null) {
-			events.emit(DiaryEvent.EntryDeleted(id))
-		}
-	}
+	suspend fun deleteEntry(id: Uuid)
 
 	suspend fun updateTranscription(
-		id: String,
+		id: Uuid,
 		transcriptionText: String?,
 		transcriptionStatus: TranscriptionStatus,
-		transcriptionUpdatedAt: String?,
-	) {
-		val current = entries[id] ?: return
-		val updated = current.copy(
-			transcriptionText = transcriptionText,
-			transcriptionStatus = transcriptionStatus,
-			transcriptionUpdatedAt = transcriptionUpdatedAt,
-		)
-		entries[id] = updated
-		events.emit(
-			DiaryEvent.TranscriptionUpdated(
-				id,
-				transcriptionText,
-				transcriptionStatus,
-				transcriptionUpdatedAt,
-			),
-		)
-	}
+		transcriptionUpdatedAt: Instant?,
+	)
+
+	suspend fun getAudio(id: Uuid): ByteArray?
 }
