@@ -53,7 +53,7 @@ class DiaryClient(
 						}
 					}
 				}
-				println("SSE connection closed")
+				Napier.i("SSE connection closed")
 			} catch (e: Exception) {
 				Napier.e("SSE connection failed", e)
 			}

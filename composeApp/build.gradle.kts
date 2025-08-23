@@ -38,7 +38,7 @@ kotlin {
 			implementation(compose.components.uiToolingPreview)
 			implementation(libs.androidx.lifecycle.viewmodelCompose)
 			implementation(libs.androidx.lifecycle.runtimeCompose)
-			implementation("org.jetbrains.kotlinx:kotlinx-io-core:0.8.0")
+			implementation(libs.kotlinx.io.core)
 			implementation(libs.ktor.clientCore)
 			implementation(libs.ktor.clientContentNegotiation)
 			implementation(libs.ktor.serializationKotlinxJson)
@@ -62,6 +62,7 @@ kotlin {
 			implementation(libs.ktor.serializationKotlinxJson)
 			implementation(libs.ktor.serverSse)
 			implementation(libs.ktor.serverNetty)
+			implementation(libs.logback)
 		}
 	}
 }
