@@ -1,6 +1,7 @@
 package de.lehrbaum.voiry
 
 import de.lehrbaum.voiry.api.v1.DiaryEvent
+import io.github.aakira.napier.Napier
 import io.ktor.serialization.kotlinx.json.json
 import io.ktor.server.application.Application
 import io.ktor.server.application.install
@@ -15,6 +16,8 @@ import io.ktor.sse.ServerSentEvent
 import kotlinx.serialization.json.Json
 
 fun main() {
+	Napier.base(Slf4jAntilog())
+	Napier.i("Starting server")
 	embeddedServer(Netty, port = SERVER_PORT, host = "0.0.0.0", module = Application::module)
 		.start(wait = true)
 }
