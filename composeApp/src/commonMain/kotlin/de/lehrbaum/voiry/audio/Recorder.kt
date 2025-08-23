@@ -3,11 +3,11 @@ package de.lehrbaum.voiry.audio
 import kotlinx.io.Buffer
 
 interface Recorder {
-    val isAvailable: Boolean
+	val isAvailable: Boolean
 
-    fun startRecording()
+	fun startRecording()
 
-    fun stopRecording(): Result<Buffer>
+	fun stopRecording(): Result<Buffer>
 
-    fun close()
+	fun close()
 }

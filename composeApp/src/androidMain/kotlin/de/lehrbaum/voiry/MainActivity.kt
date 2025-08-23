@@ -11,36 +11,38 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.tooling.preview.Preview
 
 class MainActivity : ComponentActivity() {
-    override fun onCreate(savedInstanceState: Bundle?) {
-        enableEdgeToEdge()
-        super.onCreate(savedInstanceState)
+	override fun onCreate(savedInstanceState: Bundle?) {
+		enableEdgeToEdge()
+		super.onCreate(savedInstanceState)
 
-        // Request microphone permission at startup (API 23+)
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-            if (checkSelfPermission(Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
-                requestPermissions(arrayOf(Manifest.permission.RECORD_AUDIO), REQ_RECORD_AUDIO)
-            }
-        }
+		// Request microphone permission at startup (API 23+)
+		if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+			if (checkSelfPermission(Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
+				requestPermissions(arrayOf(Manifest.permission.RECORD_AUDIO), REQ_RECORD_AUDIO)
+			}
+		}
 
-        setContent {
-            App(onRequestAudioPermission = {
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-                    if (checkSelfPermission(Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
-                        requestPermissions(arrayOf(Manifest.permission.RECORD_AUDIO), REQ_RECORD_AUDIO)
-                    }
-                }
-            })
-        }
-    }
+		setContent {
+			App(
+				onRequestAudioPermission = {
+					if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+						if (checkSelfPermission(Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
+							requestPermissions(arrayOf(Manifest.permission.RECORD_AUDIO), REQ_RECORD_AUDIO)
+						}
+					}
+				},
+			)
+		}
+	}
 
 
-    companion object {
-        private const val REQ_RECORD_AUDIO = 1001
-    }
+	companion object {
+		private const val REQ_RECORD_AUDIO = 1001
+	}
 }
 
 @Preview
 @Composable
 fun AppAndroidPreview() {
-    App()
+	App()
 }
