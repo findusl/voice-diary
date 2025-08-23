@@ -21,6 +21,7 @@ dependencies {
 	implementation(libs.ktor.serverContentNegotiation)
 	implementation(libs.ktor.serializationKotlinxJson)
 	implementation(libs.ktor.serverSse)
+	implementation(libs.napier)
 	testImplementation(libs.ktor.serverTestHost)
 	testImplementation(libs.kotlin.testJunit)
 	testImplementation(libs.ktor.clientCore)
