@@ -17,32 +17,33 @@ import kotlinx.serialization.json.Json
 
 class ServerTest {
 	@Test
-	fun `sse emits snapshot and updates`() = testApplication {
-		val service = DiaryService()
-		application { module(service) }
+	fun `sse emits snapshot and updates`() =
+		testApplication {
+			val service = DiaryService()
+			application { module(service) }
 
-		val client = createClient {
-			install(ContentNegotiation) { json() }
-			install(SSE)
-		}
-
-		val events = mutableListOf<DiaryEvent>()
-		runBlocking {
-			client.sse("/v1/entries") {
-				val event: ServerSentEvent = incoming.first()
-				events += Json.decodeFromString(DiaryEvent.serializer(), event.data!!)
+			val client = createClient {
+				install(ContentNegotiation) { json() }
+				install(SSE)
 			}
+
+			val events = mutableListOf<DiaryEvent>()
+			runBlocking {
+				client.sse("/v1/entries") {
+					val event: ServerSentEvent = incoming.first()
+					events += Json.decodeFromString(DiaryEvent.serializer(), event.data!!)
+				}
+			}
+
+			assertEquals(listOf<DiaryEvent>(DiaryEvent.EntriesSnapshot(emptyList())), events)
 		}
 
-		assertEquals(listOf<DiaryEvent>(DiaryEvent.EntriesSnapshot(emptyList())), events)
-	}
-
-	private fun sampleEntry(id: String) = VoiceDiaryEntry(
-		id = id,
-		title = "title$id",
-		recordedAt = "2025-08-23T10:15:30+02:00",
-		duration = 1000L,
-		transcriptionStatus = TranscriptionStatus.NONE,
-	)
+	private fun sampleEntry(id: String) =
+		VoiceDiaryEntry(
+			id = id,
+			title = "title$id",
+			recordedAt = "2025-08-23T10:15:30+02:00",
+			duration = 1000L,
+			transcriptionStatus = TranscriptionStatus.NONE,
+		)
 }
-

@@ -41,8 +41,11 @@ class AudioRecorder : Recorder {
 		if (!isAvailable) throw IllegalStateException("Audio recorder not available")
 		if (isRecording.get()) throw IllegalStateException("Already recording")
 
-		val minBuffer = if (bufferSizeInBytes > 0) bufferSizeInBytes else
+		val minBuffer = if (bufferSizeInBytes > 0) {
+			bufferSizeInBytes
+		} else {
 			AudioRecord.getMinBufferSize(sampleRate, channelConfig, audioEncoding).coerceAtLeast(4096)
+		}
 		try {
 			audioRecord = AudioRecord(
 				MediaRecorder.AudioSource.MIC,
@@ -122,7 +125,12 @@ class AudioRecorder : Recorder {
 		}
 	}
 
-	private fun convertToWavBuffer(pcmData: ByteArray, sampleRate: Int, channels: Int, bitsPerSample: Int): Buffer {
+	private fun convertToWavBuffer(
+		pcmData: ByteArray,
+		sampleRate: Int,
+		channels: Int,
+		bitsPerSample: Int,
+	): Buffer {
 		val byteRate = sampleRate * channels * bitsPerSample / 8
 		val blockAlign = (channels * bitsPerSample / 8).toShort()
 		val totalDataLen = pcmData.size

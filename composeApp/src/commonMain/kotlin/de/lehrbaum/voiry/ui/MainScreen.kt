@@ -78,31 +78,32 @@ fun MainScreen(
 					onClick = {
 						if (!isRecording) {
 							val result = runCatching { recorder.startRecording() }
-							result.onSuccess {
-								isRecording = true
-								error = null
-							}.onFailure { e ->
-								isRecording = false
-								error = e.message ?: "Failed to start recording"
-							}
+							result
+								.onSuccess {
+									isRecording = true
+									error = null
+								}.onFailure { e ->
+									isRecording = false
+									error = e.message ?: "Failed to start recording"
+								}
 						} else {
 							scope.launch {
 								val stopResult = recorder.stopRecording()
-								stopResult.onSuccess { buffer ->
-									// Save to server (mock)
-									runCatching { repository.saveRecording(buffer) }
-										.onSuccess { newRec ->
-											recordings = listOf(newRec) + recordings
-											isRecording = false
-										}
-										.onFailure { e ->
-											error = e.message
-											isRecording = false
-										}
-								}.onFailure { e ->
-									error = e.message
-									isRecording = false
-								}
+								stopResult
+									.onSuccess { buffer ->
+										// Save to server (mock)
+										runCatching { repository.saveRecording(buffer) }
+											.onSuccess { newRec ->
+												recordings = listOf(newRec) + recordings
+												isRecording = false
+											}.onFailure { e ->
+												error = e.message
+												isRecording = false
+											}
+									}.onFailure { e ->
+										error = e.message
+										isRecording = false
+									}
 							}
 						}
 					},
@@ -166,7 +167,11 @@ private fun RecordingRow(rec: Recording) {
 }
 
 @Composable
-private fun InfoBanner(text: String, actionLabel: String? = null, onAction: (() -> Unit)? = null) {
+private fun InfoBanner(
+	text: String,
+	actionLabel: String? = null,
+	onAction: (() -> Unit)? = null,
+) {
 	Surface(color = MaterialTheme.colorScheme.surfaceVariant) {
 		Row(
 			modifier = Modifier

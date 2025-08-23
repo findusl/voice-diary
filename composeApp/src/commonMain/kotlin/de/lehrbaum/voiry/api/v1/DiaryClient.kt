@@ -53,7 +53,7 @@ class DiaryClient(
 						}
 					}
 				}
-				println( "SSE connection closed")
+				println("SSE connection closed")
 			} catch (e: Exception) {
 				Napier.e("SSE connection failed", e)
 			}
@@ -79,10 +79,11 @@ class DiaryClient(
 							transcriptionStatus = event.transcriptionStatus,
 							transcriptionUpdatedAt = event.transcriptionUpdatedAt,
 						)
-					} else entry
+					} else {
+						entry
+					}
 				}
 			}
 		}
 	}
 }
-
