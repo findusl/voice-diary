@@ -7,6 +7,7 @@ import kotlinx.io.writeString
 
 interface RecordingRepository {
 	suspend fun listRecordings(): List<Recording>
+
 	suspend fun saveRecording(bytes: Buffer): Recording
 }
 

@@ -8,7 +8,7 @@ enum class TranscriptionStatus {
 	NONE,
 	IN_PROGRESS,
 	DONE,
-	FAILED
+	FAILED,
 }
 
 /**
@@ -25,7 +25,7 @@ data class VoiceDiaryEntry(
 	val duration: Long,
 	val transcriptionText: String? = null,
 	val transcriptionStatus: TranscriptionStatus = TranscriptionStatus.NONE,
-	val transcriptionUpdatedAt: String? = null
+	val transcriptionUpdatedAt: String? = null,
 )
 
 @Serializable
@@ -48,7 +48,6 @@ sealed interface DiaryEvent {
 		val id: String,
 		val transcriptionText: String?,
 		val transcriptionStatus: TranscriptionStatus,
-		val transcriptionUpdatedAt: String?
+		val transcriptionUpdatedAt: String?,
 	) : DiaryEvent
 }
-

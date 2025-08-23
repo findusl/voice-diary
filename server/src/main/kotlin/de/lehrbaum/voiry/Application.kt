@@ -35,4 +35,3 @@ fun Application.module(eventProvider: DiaryEventProvider = DiaryService()) {
 		}
 	}
 }
-

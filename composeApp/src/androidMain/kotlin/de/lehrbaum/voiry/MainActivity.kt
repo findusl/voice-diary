@@ -30,7 +30,6 @@ class MainActivity : ComponentActivity() {
 		}
 	}
 
-
 	companion object {
 		private const val REQ_RECORD_AUDIO = 1001
 	}
