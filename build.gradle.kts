@@ -11,3 +11,7 @@ plugins {
 	alias(libs.plugins.mokkery) apply false
 	alias(libs.plugins.ktlint)
 }
+
+allprojects {
+	apply(plugin = rootProject.libs.plugins.ktlint.get().pluginId)
+}
