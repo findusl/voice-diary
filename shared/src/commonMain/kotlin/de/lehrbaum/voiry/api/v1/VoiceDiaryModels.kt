@@ -1,5 +1,12 @@
+@file:OptIn(ExperimentalUuidApi::class, ExperimentalTime::class)
+
 package de.lehrbaum.voiry.api.v1
 
+import kotlin.time.Duration
+import kotlin.time.ExperimentalTime
+import kotlin.time.Instant
+import kotlin.uuid.ExperimentalUuidApi
+import kotlin.uuid.Uuid
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
@@ -11,21 +18,16 @@ enum class TranscriptionStatus {
 	FAILED,
 }
 
-/**
- * Representation of a single voice diary entry.
- *
- * All timestamps must be ISO-8601/RFC3339 strings with explicit UTC offset.
- * Duration is encoded in milliseconds.
- */
+/** Representation of a single voice diary entry. */
 @Serializable
 data class VoiceDiaryEntry(
-	val id: String,
+	val id: Uuid,
 	val title: String,
-	val recordedAt: String,
-	val duration: Long,
+	val recordedAt: Instant,
+	val duration: Duration,
 	val transcriptionText: String? = null,
 	val transcriptionStatus: TranscriptionStatus = TranscriptionStatus.NONE,
-	val transcriptionUpdatedAt: String? = null,
+	val transcriptionUpdatedAt: Instant? = null,
 )
 
 @Serializable
@@ -40,14 +42,14 @@ sealed interface DiaryEvent {
 
 	@Serializable
 	@SerialName("entryDeleted")
-	data class EntryDeleted(val id: String) : DiaryEvent
+	data class EntryDeleted(val id: Uuid) : DiaryEvent
 
 	@Serializable
 	@SerialName("transcriptionUpdated")
 	data class TranscriptionUpdated(
-		val id: String,
+		val id: Uuid,
 		val transcriptionText: String?,
 		val transcriptionStatus: TranscriptionStatus,
-		val transcriptionUpdatedAt: String?,
+		val transcriptionUpdatedAt: Instant?,
 	) : DiaryEvent
 }

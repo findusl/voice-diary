@@ -6,6 +6,8 @@ import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
 import io.ktor.client.plugins.sse.SSE
 import io.ktor.client.plugins.sse.sse
 import io.ktor.serialization.kotlinx.json.json
+import kotlin.time.ExperimentalTime
+import kotlin.uuid.ExperimentalUuidApi
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -22,6 +24,8 @@ import kotlinx.serialization.json.Json
  *
  * Call [start] to subscribe to server sent events.
  */
+@ExperimentalUuidApi
+@ExperimentalTime
 class DiaryClient(
 	private val baseUrl: String,
 	private val httpClient: HttpClient = HttpClient {
