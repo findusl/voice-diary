@@ -122,3 +122,4 @@ frontendios/iosApp.xcodeproj/*
 .kotlin/
 /.idea/deploymentTargetSelector.xml
 /.idea/xcode.xml
+/.idea/kotlinc.xml
