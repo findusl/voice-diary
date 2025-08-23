@@ -39,7 +39,10 @@ kotlin {
 			implementation(libs.androidx.lifecycle.viewmodelCompose)
 			implementation(libs.androidx.lifecycle.runtimeCompose)
 			implementation("org.jetbrains.kotlinx:kotlinx-io-core:0.8.0")
-
+			implementation(libs.ktor.clientCore)
+			implementation(libs.ktor.clientContentNegotiation)
+			implementation(libs.ktor.serializationKotlinxJson)
+			implementation(libs.ktor.clientCio)
 			api(libs.napier)
 		}
 		commonTest.dependencies {
@@ -53,6 +56,12 @@ kotlin {
 			implementation(compose.uiTest)
 			implementation(compose.desktop.uiTestJUnit4)
 			implementation(libs.junit)
+			implementation(projects.server)
+			implementation(libs.ktor.serverTestHost)
+			implementation(libs.ktor.serverContentNegotiation)
+			implementation(libs.ktor.serializationKotlinxJson)
+			implementation(libs.ktor.serverSse)
+			implementation(libs.ktor.serverNetty)
 		}
 	}
 }
