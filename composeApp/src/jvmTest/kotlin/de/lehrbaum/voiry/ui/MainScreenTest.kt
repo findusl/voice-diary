@@ -5,6 +5,7 @@ import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performTextInput
 import androidx.compose.ui.test.runComposeUiTest
 import de.lehrbaum.voiry.audio.Recorder
 import de.lehrbaum.voiry.recordings.Recording
@@ -36,10 +37,13 @@ class MainScreenTest {
 			// Title present
 			onNodeWithText("Voice Diary", substring = false).assertIsDisplayed()
 
-			// The list contains three predefined recordings
+			// The list contains three predefined recordings with transcripts
 			onNodeWithText("Recording 1", substring = false).assertIsDisplayed()
+			onNodeWithText("Transcript 1", substring = false).assertIsDisplayed()
 			onNodeWithText("Recording 2", substring = false).assertIsDisplayed()
+			onNodeWithText("Transcript 2", substring = false).assertIsDisplayed()
 			onNodeWithText("Recording 3", substring = false).assertIsDisplayed()
+			onNodeWithText("Transcript 3", substring = false).assertIsDisplayed()
 
 			// FAB should be hidden when recorder is not available
 			try {
@@ -76,38 +80,75 @@ class MainScreenTest {
 			waitForIdle()
 			onNodeWithText("Stop", substring = false).assertIsDisplayed()
 
-			// Stop recording and ensure a new item is added and label toggles back
+			// Stop recording and confirm dialog
 			onNodeWithText("Stop", substring = false).performClick()
 			waitForIdle()
+			onNodeWithText("Title", substring = false).performTextInput("My Entry")
+			onNodeWithText("Save", substring = false).performClick()
+			waitForIdle()
 			onNodeWithText("Record", substring = false).assertIsDisplayed()
-			// New item appears at top with expected title
-			onNodeWithText("Recording 4", substring = false).assertIsDisplayed()
+			// New item appears at top with expected title and transcript
+			onNodeWithText("My Entry", substring = false).assertIsDisplayed()
+			onNodeWithText("Transcript for My Entry", substring = false).assertIsDisplayed()
+		}
+
+	@Test
+	fun delete_removes_item_from_list() =
+		runComposeUiTest {
+			val repo = FakeRecordingRepositoryMutable()
+			val recorder = mock<Recorder>()
+			every { recorder.isAvailable } returns false
+
+			setContent {
+				MaterialTheme {
+					MainScreen(repository = repo, recorder)
+				}
+			}
+
+			waitForIdle()
+
+			onNodeWithText("Recording 1", substring = false).assertIsDisplayed()
+			onNodeWithText("Delete", substring = false).performClick()
+			waitForIdle()
+			try {
+				onNodeWithText("Recording 1", substring = false).assertIsDisplayed()
+				throw AssertionError("Recording 1 should have been deleted")
+			} catch (_: AssertionError) {
+				// Expected
+			}
 		}
 }
 
 private class FakeRecordingRepository : RecordingRepository {
 	private val items: List<Recording> = List(3) { idx ->
 		val buf = Buffer().apply { writeString("Dummy #${idx + 1}") }
-		Recording(id = "id-${idx + 1}", title = "Recording ${idx + 1}", bytes = buf)
+		Recording(id = "id-${idx + 1}", title = "Recording ${idx + 1}", transcript = "Transcript ${idx + 1}", bytes = buf)
 	}
 
 	override suspend fun listRecordings(): List<Recording> = items
 
-	override suspend fun saveRecording(bytes: Buffer): Recording = Recording(id = "id-new", title = "New Recording", bytes = bytes)
+	override suspend fun saveRecording(title: String, bytes: Buffer): Recording =
+		Recording(id = "id-new", title = title, transcript = "Transcript for $title", bytes = bytes)
+
+	override suspend fun deleteRecording(id: String) {}
 }
 
 private class FakeRecordingRepositoryMutable : RecordingRepository {
 	private val items = mutableListOf<Recording>().apply {
 		repeat(3) { idx ->
-			add(Recording("id-${idx + 1}", "Recording ${idx + 1}", Buffer().apply { writeString("Dummy #${idx + 1}") }))
+			add(Recording("id-${idx + 1}", "Recording ${idx + 1}", "Transcript ${idx + 1}", Buffer().apply { writeString("Dummy #${idx + 1}") }))
 		}
 	}
 
 	override suspend fun listRecordings(): List<Recording> = items.toList()
 
-	override suspend fun saveRecording(bytes: Buffer): Recording {
-		val rec = Recording("id-${items.size + 1}", "Recording ${items.size + 1}", bytes)
+	override suspend fun saveRecording(title: String, bytes: Buffer): Recording {
+		val rec = Recording("id-${items.size + 1}", title, "Transcript for $title", bytes)
 		items.add(0, rec)
 		return rec
+	}
+
+	override suspend fun deleteRecording(id: String) {
+		items.removeAll { it.id == id }
 	}
 }

@@ -8,7 +8,9 @@ import kotlinx.io.writeString
 interface RecordingRepository {
 	suspend fun listRecordings(): List<Recording>
 
-	suspend fun saveRecording(bytes: Buffer): Recording
+	suspend fun saveRecording(title: String, bytes: Buffer): Recording
+
+	suspend fun deleteRecording(id: String)
 }
 
 class MockRecordingRepository : RecordingRepository {
@@ -20,6 +22,7 @@ class MockRecordingRepository : RecordingRepository {
 			items += Recording(
 				id = Random.nextLong().toString(),
 				title = "Recording ${idx + 1}",
+				transcript = "Transcript ${idx + 1}",
 				bytes = buf,
 			)
 		}
@@ -31,16 +34,20 @@ class MockRecordingRepository : RecordingRepository {
 		return items.toList()
 	}
 
-	override suspend fun saveRecording(bytes: Buffer): Recording {
+	override suspend fun saveRecording(title: String, bytes: Buffer): Recording {
 		// Simulate upload latency
 		delay(500)
-		val title = "Recording ${items.size + 1}"
 		val rec = Recording(
 			id = Random.nextLong().toString(),
 			title = title,
+			transcript = "Transcript for $title",
 			bytes = bytes,
 		)
 		items.add(0, rec)
 		return rec
+	}
+
+	override suspend fun deleteRecording(id: String) {
+		items.removeAll { it.id == id }
 	}
 }
