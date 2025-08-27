@@ -3,7 +3,7 @@
 package de.lehrbaum.voiry
 
 import de.lehrbaum.voiry.api.v1.DiaryEvent
-import de.lehrbaum.voiry.api.v1.TranscriptionStatus
+import de.lehrbaum.voiry.api.v1.UpdateTranscriptionRequest
 import de.lehrbaum.voiry.api.v1.VoiceDiaryEntry
 import io.github.aakira.napier.Napier
 import io.ktor.http.ContentType
@@ -30,12 +30,10 @@ import io.ktor.server.sse.sse
 import io.ktor.sse.ServerSentEvent
 import io.ktor.utils.io.readRemaining
 import kotlin.time.ExperimentalTime
-import kotlin.time.Instant
 import kotlin.uuid.ExperimentalUuidApi
 import kotlin.uuid.Uuid
 import kotlinx.coroutines.runBlocking
 import kotlinx.io.readByteArray
-import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 
 fun main() {
@@ -110,10 +108,3 @@ fun Application.module(service: DiaryService = runBlocking { DiaryServiceImpl.cr
 		}
 	}
 }
-
-@Serializable
-data class UpdateTranscriptionRequest(
-	val transcriptionText: String?,
-	val transcriptionStatus: TranscriptionStatus,
-	val transcriptionUpdatedAt: Instant?,
-)

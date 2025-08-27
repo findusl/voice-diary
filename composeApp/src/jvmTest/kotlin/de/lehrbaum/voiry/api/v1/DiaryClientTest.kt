@@ -9,14 +9,24 @@ import dev.mokkery.answering.calls
 import dev.mokkery.answering.returns
 import dev.mokkery.every
 import dev.mokkery.mock
+import io.ktor.client.plugins.ClientRequestException
+import io.ktor.client.plugins.ServerResponseException
 import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
 import io.ktor.client.plugins.sse.SSE
+import io.ktor.http.HttpStatusCode
 import io.ktor.serialization.kotlinx.json.json
+import io.ktor.server.response.respond
+import io.ktor.server.routing.delete
+import io.ktor.server.routing.post
+import io.ktor.server.routing.put
+import io.ktor.server.routing.routing
+import io.ktor.server.testing.ApplicationTestBuilder
 import io.ktor.server.testing.testApplication
 import java.nio.file.Files
 import kotlin.test.BeforeTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
 import kotlin.test.assertTrue
 import kotlin.time.Clock
 import kotlin.time.Duration.Companion.seconds
@@ -45,13 +55,7 @@ class DiaryClientTest {
 			val service = runBlocking { DiaryServiceImpl.create(DiaryRepository(Files.createTempDirectory("clientTest1"))) }
 			application { module(service) }
 
-			val client = DiaryClient(
-				baseUrl = "",
-				httpClient = createClient {
-					install(ContentNegotiation) { json() }
-					install(SSE)
-				},
-			)
+			val client = createDiaryClientAgainstMockKtorApplication()
 			client.start()
 
 			val entry = sampleEntry(Uuid.random())
@@ -102,6 +106,143 @@ class DiaryClientTest {
 			val ids = client.entries.filter { it.size > 1 }.first().map { it.id }
 			assertTrue(ids.containsAll(listOf(entry1.id, entry2.id)))
 			client.stop()
+		}
+
+	@Test
+	fun `create entry success`() =
+		testApplication {
+			val service = runBlocking {
+				DiaryServiceImpl.create(DiaryRepository(Files.createTempDirectory("clientTestCreate")))
+			}
+			application { module(service) }
+			val client = createDiaryClientAgainstMockKtorApplication()
+			val entry = sampleEntry(Uuid.random())
+			val result = runBlocking { client.createEntry(entry, ByteArray(0)) }
+			assertEquals(entry, result)
+		}
+
+	@Test
+	fun `create entry 400`() =
+		testApplication {
+			application {
+				routing {
+					post("/v1/entries") { call.respond(HttpStatusCode.BadRequest) }
+				}
+			}
+			val client = createDiaryClientAgainstMockKtorApplication()
+			val entry = sampleEntry(Uuid.random())
+			assertFailsWith<ClientRequestException> {
+				runBlocking { client.createEntry(entry, ByteArray(0)) }
+			}
+		}
+
+	@Test
+	fun `create entry 500`() =
+		testApplication {
+			application {
+				routing {
+					post("/v1/entries") { call.respond(HttpStatusCode.InternalServerError) }
+				}
+			}
+			val client = createDiaryClientAgainstMockKtorApplication()
+			val entry = sampleEntry(Uuid.random())
+			assertFailsWith<ServerResponseException> {
+				runBlocking { client.createEntry(entry, ByteArray(0)) }
+			}
+		}
+
+	@Test
+	fun `update transcription success`() =
+		testApplication {
+			val service = runBlocking {
+				DiaryServiceImpl.create(DiaryRepository(Files.createTempDirectory("clientTestUpdate")))
+			}
+			val entry = sampleEntry(Uuid.random())
+			runBlocking { service.addEntry(entry, ByteArray(0)) }
+			application { module(service) }
+			val client = createDiaryClientAgainstMockKtorApplication()
+			val req = UpdateTranscriptionRequest("text", TranscriptionStatus.DONE, Clock.System.now())
+			runBlocking { client.updateTranscription(entry.id, req) }
+		}
+
+	@Test
+	fun `update transcription 404`() =
+		testApplication {
+			application {
+				routing {
+					put("/v1/entries/{id}/transcription") { call.respond(HttpStatusCode.NotFound) }
+				}
+			}
+			val client = DiaryClient(
+				baseUrl = "",
+				httpClient = createClient { install(ContentNegotiation) { json() } },
+			)
+			val req = UpdateTranscriptionRequest(null, TranscriptionStatus.NONE, null)
+			assertFailsWith<ClientRequestException> {
+				runBlocking { client.updateTranscription(Uuid.random(), req) }
+			}
+		}
+
+	@Test
+	fun `update transcription 500`() =
+		testApplication {
+			application {
+				routing {
+					put("/v1/entries/{id}/transcription") { call.respond(HttpStatusCode.InternalServerError) }
+				}
+			}
+			val client = createDiaryClientAgainstMockKtorApplication()
+			val req = UpdateTranscriptionRequest(null, TranscriptionStatus.NONE, null)
+			assertFailsWith<ServerResponseException> {
+				runBlocking { client.updateTranscription(Uuid.random(), req) }
+			}
+		}
+
+	@Test
+	fun `delete entry success`() =
+		testApplication {
+			val service = runBlocking {
+				DiaryServiceImpl.create(DiaryRepository(Files.createTempDirectory("clientTestDelete")))
+			}
+			val entry = sampleEntry(Uuid.random())
+			runBlocking { service.addEntry(entry, ByteArray(0)) }
+			application { module(service) }
+			val client = createDiaryClientAgainstMockKtorApplication()
+			runBlocking { client.deleteEntry(entry.id) }
+		}
+
+	@Test
+	fun `delete entry 404`() =
+		testApplication {
+			application {
+				routing { delete("/v1/entries/{id}") { call.respond(HttpStatusCode.NotFound) } }
+			}
+			val client = createDiaryClientAgainstMockKtorApplication()
+			assertFailsWith<ClientRequestException> {
+				runBlocking { client.deleteEntry(Uuid.random()) }
+			}
+		}
+
+	private fun ApplicationTestBuilder.createDiaryClientAgainstMockKtorApplication(): DiaryClient =
+		DiaryClient(
+			baseUrl = "",
+			httpClient = createClient {
+				install(ContentNegotiation) { json() }
+
+				install(SSE)
+			},
+		)
+
+	@Test
+	fun `delete entry 500`() =
+		testApplication {
+			application {
+				routing { delete("/v1/entries/{id}") { call.respond(HttpStatusCode.InternalServerError) } }
+			}
+			val client = createDiaryClientAgainstMockKtorApplication()
+			assertFailsWith<ServerResponseException> {
+				runBlocking { client.deleteEntry(Uuid.random()) }
+			}
 		}
 
 	private fun sampleEntry(id: Uuid) =
