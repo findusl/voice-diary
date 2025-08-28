@@ -11,7 +11,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.HorizontalDivider
@@ -25,7 +24,6 @@ import androidx.compose.material3.TextField
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -34,24 +32,29 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import de.lehrbaum.voiry.api.v1.DiaryClient
+import de.lehrbaum.voiry.api.v1.VoiceDiaryEntry
 import de.lehrbaum.voiry.audio.Recorder
 import de.lehrbaum.voiry.audio.platformRecorder
-import de.lehrbaum.voiry.recordings.MockRecordingRepository
-import de.lehrbaum.voiry.recordings.Recording
-import de.lehrbaum.voiry.recordings.RecordingRepository
+import kotlin.time.Clock
+import kotlin.time.Duration
+import kotlin.time.ExperimentalTime
+import kotlin.uuid.ExperimentalUuidApi
+import kotlin.uuid.Uuid
 import kotlinx.coroutines.launch
 import kotlinx.io.Buffer
+import kotlinx.io.readByteArray
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalTime::class, ExperimentalUuidApi::class)
 @Composable
 fun MainScreen(
-	repository: RecordingRepository = remember { MockRecordingRepository() },
+	diaryClient: DiaryClient,
 	recorder: Recorder = platformRecorder,
 	onRequestAudioPermission: (() -> Unit)? = null,
 ) {
 	val scope = rememberCoroutineScope()
-	var recordings by remember { mutableStateOf<List<Recording>>(emptyList()) }
-	var loading by remember { mutableStateOf(true) }
+	val entries by diaryClient.entries.collectAsStateWithLifecycle()
 	var error by remember { mutableStateOf<String?>(null) }
 	var isRecording by remember { mutableStateOf(false) }
 	var pendingRecording by remember { mutableStateOf<Buffer?>(null) }
@@ -64,13 +67,6 @@ fun MainScreen(
 			} catch (_: Throwable) {
 			}
 		}
-	}
-
-	LaunchedEffect(Unit) {
-		runCatching { repository.listRecordings() }
-			.onSuccess { recordings = it }
-			.onFailure { error = it.message }
-		loading = false
 	}
 
 	Scaffold(
@@ -129,13 +125,7 @@ fun MainScreen(
 				)
 			}
 			when {
-				loading -> {
-					Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-						CircularProgressIndicator()
-					}
-				}
-
-				recordings.isEmpty() -> {
+				entries.isEmpty() -> {
 					Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
 						Text("No recordings yet. Tap Record to add one.")
 					}
@@ -146,12 +136,11 @@ fun MainScreen(
 						modifier = Modifier.fillMaxSize(),
 						contentPadding = PaddingValues(vertical = 8.dp),
 					) {
-						items(recordings, key = { it.id }) { rec ->
-							RecordingRow(rec) {
+						items(entries, key = { it.id }) { entry ->
+							EntryRow(entry) {
 								scope.launch {
-									runCatching { repository.deleteRecording(it.id) }
+									runCatching { diaryClient.deleteEntry(it.id) }
 										.onFailure { e -> error = e.message }
-									recordings = recordings.filterNot { recItem -> recItem.id == it.id }
 								}
 							}
 						}
@@ -178,10 +167,15 @@ fun MainScreen(
 						val buffer = pendingRecording
 						if (buffer != null) {
 							scope.launch {
-								runCatching { repository.saveRecording(pendingTitle, buffer) }
-									.onSuccess { newRec ->
-										recordings = listOf(newRec) + recordings
-									}.onFailure { e -> error = e.message }
+								val bytes = buffer.readByteArray()
+								val entry = VoiceDiaryEntry(
+									id = Uuid.random(),
+									title = pendingTitle,
+									recordedAt = Clock.System.now(),
+									duration = Duration.ZERO,
+								)
+								runCatching { diaryClient.createEntry(entry, bytes) }
+									.onFailure { e -> error = e.message }
 								pendingRecording = null
 								pendingTitle = ""
 							}
@@ -198,12 +192,14 @@ fun MainScreen(
 }
 
 @Composable
-private fun RecordingRow(rec: Recording, onDelete: (Recording) -> Unit) {
+private fun EntryRow(entry: VoiceDiaryEntry, onDelete: (VoiceDiaryEntry) -> Unit) {
 	ListItem(
-		headlineContent = { Text(rec.title) },
-		supportingContent = { Text(rec.transcript) },
+		headlineContent = { Text(entry.title) },
+		supportingContent = {
+			Text(entry.transcriptionText ?: entry.transcriptionStatus.name)
+		},
 		trailingContent = {
-			TextButton(onClick = { onDelete(rec) }) { Text("Delete") }
+			TextButton(onClick = { onDelete(entry) }) { Text("Delete") }
 		},
 	)
 	HorizontalDivider()
