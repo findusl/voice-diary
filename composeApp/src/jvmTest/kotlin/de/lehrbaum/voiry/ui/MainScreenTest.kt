@@ -1,6 +1,7 @@
 package de.lehrbaum.voiry.ui
 
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsDisplayed
@@ -9,6 +10,10 @@ import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performTextInput
 import androidx.compose.ui.test.runComposeUiTest
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleOwner
+import androidx.lifecycle.LifecycleRegistry
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import de.lehrbaum.voiry.UiTest
 import de.lehrbaum.voiry.api.v1.DiaryClient
 import de.lehrbaum.voiry.api.v1.TranscriptionStatus
@@ -18,7 +23,6 @@ import dev.mokkery.answering.returns
 import dev.mokkery.every
 import dev.mokkery.mock
 import io.ktor.client.HttpClient
-import io.ktor.client.engine.mock.MockEngine
 import kotlin.time.Clock
 import kotlin.time.Duration
 import kotlin.time.ExperimentalTime
@@ -41,8 +45,10 @@ class MainScreenTest {
 			every { unavailableRecorder.isAvailable } returns false
 
 			setContent {
-				MaterialTheme {
-					MainScreen(diaryClient = client, recorder = unavailableRecorder)
+				CompositionLocalProvider(LocalLifecycleOwner provides FakeLifecycleOwner()) {
+					MaterialTheme {
+						MainScreen(diaryClient = client, recorder = unavailableRecorder)
+					}
 				}
 			}
 
@@ -76,8 +82,10 @@ class MainScreenTest {
 			every { recorder.stopRecording() } returns Result.success(buffer)
 
 			setContent {
-				MaterialTheme {
-					MainScreen(diaryClient = client, recorder)
+				CompositionLocalProvider(LocalLifecycleOwner provides FakeLifecycleOwner()) {
+					MaterialTheme {
+						MainScreen(diaryClient = client, recorder)
+					}
 				}
 			}
 
@@ -109,8 +117,10 @@ class MainScreenTest {
 			every { recorder.isAvailable } returns false
 
 			setContent {
-				MaterialTheme {
-					MainScreen(diaryClient = client, recorder)
+				CompositionLocalProvider(LocalLifecycleOwner provides FakeLifecycleOwner()) {
+					MaterialTheme {
+						MainScreen(diaryClient = client, recorder)
+					}
 				}
 			}
 
@@ -135,7 +145,7 @@ private class FakeDiaryClient(
 			transcriptionStatus = TranscriptionStatus.DONE,
 		)
 	},
-) : DiaryClient(baseUrl = "", httpClient = HttpClient(MockEngine)) {
+) : DiaryClient(baseUrl = "", httpClient = HttpClient()) {
 	private val _entries = MutableStateFlow(initial)
 	override val entries: MutableStateFlow<List<VoiceDiaryEntry>> get() = _entries
 
@@ -153,4 +163,11 @@ private class FakeDiaryClient(
 	}
 
 	override fun close() {}
+}
+
+private class FakeLifecycleOwner : LifecycleOwner {
+	private val registry = LifecycleRegistry(this).apply {
+		currentState = Lifecycle.State.RESUMED
+	}
+	override val lifecycle: Lifecycle get() = registry
 }
