@@ -64,7 +64,6 @@ kotlin {
 			implementation(libs.ktor.serverSse)
 			implementation(libs.ktor.serverNetty)
 			implementation(libs.logback)
-			implementation(libs.ktor.clientMock)
 			implementation(libs.mokkery.runtime)
 		}
 	}
