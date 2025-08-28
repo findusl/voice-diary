@@ -9,6 +9,7 @@ import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performTextInput
 import androidx.compose.ui.test.runComposeUiTest
+import de.lehrbaum.voiry.UiTest
 import de.lehrbaum.voiry.audio.Recorder
 import de.lehrbaum.voiry.recordings.Recording
 import de.lehrbaum.voiry.recordings.RecordingRepository
@@ -18,8 +19,10 @@ import dev.mokkery.mock
 import kotlinx.io.Buffer
 import kotlinx.io.writeString
 import org.junit.Test
+import org.junit.experimental.categories.Category
 
 @OptIn(ExperimentalTestApi::class)
+@Category(UiTest::class)
 class MainScreenTest {
 	@Test
 	fun displays_seeded_recordings_and_title_and_hides_fab_when_unavailable() =
