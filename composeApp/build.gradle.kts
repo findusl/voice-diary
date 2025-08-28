@@ -1,3 +1,4 @@
+import org.gradle.api.tasks.testing.Test
 import org.jetbrains.compose.ExperimentalComposeLibrary
 import org.jetbrains.compose.desktop.application.dsl.TargetFormat
 import org.jetbrains.kotlin.gradle.ExperimentalKotlinGradlePluginApi
@@ -65,6 +66,18 @@ kotlin {
 			implementation(libs.logback)
 			implementation(libs.mokkery.runtime)
 		}
+	}
+}
+
+val jvmTest by tasks.existing(Test::class)
+
+tasks.register<Test>("jvmNoUiTest") {
+	group = "verification"
+	description = "Runs JVM tests excluding UI tests"
+	testClassesDirs = jvmTest.get().testClassesDirs
+	classpath = jvmTest.get().classpath
+	useJUnit {
+		excludeCategories("de.lehrbaum.voiry.UiTest")
 	}
 }
 

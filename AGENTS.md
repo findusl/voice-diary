@@ -5,3 +5,4 @@
 - Server-only code must reside in the `server` module.
 
 Before commit please run `./gradlew ktlintFormat`
+To verify changes run `./gradlew checkAgentsEnvironment`
