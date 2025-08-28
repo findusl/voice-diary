@@ -46,7 +46,7 @@ import kotlinx.serialization.json.Json
  */
 @ExperimentalUuidApi
 @ExperimentalTime
-class DiaryClient(
+open class DiaryClient(
 	private val baseUrl: String,
 	private val httpClient: HttpClient = HttpClient {
 		install(ContentNegotiation) { json() }
@@ -55,7 +55,7 @@ class DiaryClient(
 ) : AutoCloseable {
 	private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
 
-	val entries: StateFlow<List<VoiceDiaryEntry>> = flow {
+	open val entries: StateFlow<List<VoiceDiaryEntry>> = flow {
 		while (currentCoroutineContext().isActive) {
 			try {
 				httpClient.sse("$baseUrl/v1/entries") {
@@ -79,7 +79,7 @@ class DiaryClient(
 
 	override fun close() = scope.cancel()
 
-	suspend fun createEntry(entry: VoiceDiaryEntry, audio: ByteArray): VoiceDiaryEntry {
+	open suspend fun createEntry(entry: VoiceDiaryEntry, audio: ByteArray): VoiceDiaryEntry {
 		val parts = formData {
 			append(
 				"metadata",
@@ -118,7 +118,7 @@ class DiaryClient(
 		}
 	}
 
-	suspend fun updateTranscription(id: Uuid, request: UpdateTranscriptionRequest) {
+	open suspend fun updateTranscription(id: Uuid, request: UpdateTranscriptionRequest) {
 		val response = httpClient.put("$baseUrl/v1/entries/$id/transcription") {
 			header(HttpHeaders.ContentType, ContentType.Application.Json.toString())
 			setBody(request)
@@ -133,7 +133,7 @@ class DiaryClient(
 		}
 	}
 
-	suspend fun deleteEntry(id: Uuid) {
+	open suspend fun deleteEntry(id: Uuid) {
 		val response = httpClient.delete("$baseUrl/v1/entries/$id")
 		if (!response.status.isSuccess()) {
 			val text = response.bodyAsText()

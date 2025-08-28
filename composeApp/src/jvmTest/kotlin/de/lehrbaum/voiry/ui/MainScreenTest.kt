@@ -10,30 +10,39 @@ import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performTextInput
 import androidx.compose.ui.test.runComposeUiTest
 import de.lehrbaum.voiry.UiTest
+import de.lehrbaum.voiry.api.v1.DiaryClient
+import de.lehrbaum.voiry.api.v1.TranscriptionStatus
+import de.lehrbaum.voiry.api.v1.VoiceDiaryEntry
 import de.lehrbaum.voiry.audio.Recorder
-import de.lehrbaum.voiry.recordings.Recording
-import de.lehrbaum.voiry.recordings.RecordingRepository
 import dev.mokkery.answering.returns
 import dev.mokkery.every
 import dev.mokkery.mock
+import io.ktor.client.HttpClient
+import io.ktor.client.engine.mock.MockEngine
+import kotlin.time.Clock
+import kotlin.time.Duration
+import kotlin.time.ExperimentalTime
+import kotlin.uuid.ExperimentalUuidApi
+import kotlin.uuid.Uuid
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.io.Buffer
 import kotlinx.io.writeString
 import org.junit.Test
 import org.junit.experimental.categories.Category
 
-@OptIn(ExperimentalTestApi::class)
+@OptIn(ExperimentalTestApi::class, ExperimentalTime::class, ExperimentalUuidApi::class)
 @Category(UiTest::class)
 class MainScreenTest {
 	@Test
 	fun displays_seeded_recordings_and_title_and_hides_fab_when_unavailable() =
 		runComposeUiTest {
-			val repo = FakeRecordingRepository()
+			val client = FakeDiaryClient()
 			val unavailableRecorder = mock<Recorder>()
 			every { unavailableRecorder.isAvailable } returns false
 
 			setContent {
 				MaterialTheme {
-					MainScreen(repository = repo, unavailableRecorder)
+					MainScreen(diaryClient = client, recorder = unavailableRecorder)
 				}
 			}
 
@@ -59,7 +68,7 @@ class MainScreenTest {
 	@Test
 	fun press_record_then_stop_adds_new_item_and_toggles_label() =
 		runComposeUiTest {
-			val repo = FakeRecordingRepositoryMutable()
+			val client = FakeDiaryClient()
 			val buffer = Buffer().apply { writeString("new bytes") }
 			val recorder = mock<Recorder>()
 			every { recorder.isAvailable } returns true
@@ -68,7 +77,7 @@ class MainScreenTest {
 
 			setContent {
 				MaterialTheme {
-					MainScreen(repository = repo, recorder)
+					MainScreen(diaryClient = client, recorder)
 				}
 			}
 
@@ -95,13 +104,13 @@ class MainScreenTest {
 	@Test
 	fun delete_removes_item_from_list() =
 		runComposeUiTest {
-			val repo = FakeRecordingRepositoryMutable()
+			val client = FakeDiaryClient()
 			val recorder = mock<Recorder>()
 			every { recorder.isAvailable } returns false
 
 			setContent {
 				MaterialTheme {
-					MainScreen(repository = repo, recorder)
+					MainScreen(diaryClient = client, recorder)
 				}
 			}
 
@@ -114,36 +123,34 @@ class MainScreenTest {
 		}
 }
 
-private class FakeRecordingRepository : RecordingRepository {
-	private val items: List<Recording> = List(3) { idx ->
-		val buf = Buffer().apply { writeString("Dummy #${idx + 1}") }
-		Recording(id = "id-${idx + 1}", title = "Recording ${idx + 1}", transcript = "Transcript ${idx + 1}", bytes = buf)
+@OptIn(ExperimentalTime::class, ExperimentalUuidApi::class)
+private class FakeDiaryClient(
+	initial: List<VoiceDiaryEntry> = List(3) { idx ->
+		VoiceDiaryEntry(
+			id = Uuid.random(),
+			title = "Recording ${idx + 1}",
+			recordedAt = Clock.System.now(),
+			duration = Duration.ZERO,
+			transcriptionText = "Transcript ${idx + 1}",
+			transcriptionStatus = TranscriptionStatus.DONE,
+		)
+	},
+) : DiaryClient(baseUrl = "", httpClient = HttpClient(MockEngine)) {
+	private val _entries = MutableStateFlow(initial)
+	override val entries: MutableStateFlow<List<VoiceDiaryEntry>> get() = _entries
+
+	override suspend fun createEntry(entry: VoiceDiaryEntry, audio: ByteArray): VoiceDiaryEntry {
+		val withTranscript = entry.copy(
+			transcriptionText = "Transcript for ${entry.title}",
+			transcriptionStatus = TranscriptionStatus.DONE,
+		)
+		_entries.value = listOf(withTranscript) + _entries.value
+		return withTranscript
 	}
 
-	override suspend fun listRecordings(): List<Recording> = items
-
-	override suspend fun saveRecording(title: String, bytes: Buffer): Recording =
-		Recording(id = "id-new", title = title, transcript = "Transcript for $title", bytes = bytes)
-
-	override suspend fun deleteRecording(id: String) {}
-}
-
-private class FakeRecordingRepositoryMutable : RecordingRepository {
-	private val items = mutableListOf<Recording>().apply {
-		repeat(3) { idx ->
-			add(Recording("id-${idx + 1}", "Recording ${idx + 1}", "Transcript ${idx + 1}", Buffer().apply { writeString("Dummy #${idx + 1}") }))
-		}
+	override suspend fun deleteEntry(id: Uuid) {
+		_entries.value = _entries.value.filterNot { it.id == id }
 	}
 
-	override suspend fun listRecordings(): List<Recording> = items.toList()
-
-	override suspend fun saveRecording(title: String, bytes: Buffer): Recording {
-		val rec = Recording("id-${items.size + 1}", title, "Transcript for $title", bytes)
-		items.add(0, rec)
-		return rec
-	}
-
-	override suspend fun deleteRecording(id: String) {
-		items.removeAll { it.id == id }
-	}
+	override fun close() {}
 }
