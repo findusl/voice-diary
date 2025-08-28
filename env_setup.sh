@@ -10,4 +10,5 @@ export PATH="$ANDROID_SDK_ROOT/cmdline-tools/latest/bin:$ANDROID_SDK_ROOT/platfo
 /bin/bash -c "yes | sdkmanager --licenses"
 sdkmanager "platform-tools" "platforms;android-35" "build-tools;35.0.0"
 cd $WORKSPACE_DIR
+printf "sdk.dir=%s\n" "$ANDROID_SDK_ROOT" > local.properties
 ./gradlew :composeApp:compileDebugSources

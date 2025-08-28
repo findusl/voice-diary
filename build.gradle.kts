@@ -21,3 +21,17 @@ allprojects {
 		}
 	}
 }
+
+tasks.register("checkAgentsEnvironment") {
+	group = "verification"
+	description = "Runs all tests that are expected to pass in the agent environment"
+	dependsOn(
+		":composeApp:jvmNoUiTest",
+		":composeApp:testDebugUnitTest",
+		":composeApp:testReleaseUnitTest",
+		":shared:jvmTest",
+		":shared:testDebugUnitTest",
+		":shared:testReleaseUnitTest",
+		":server:test",
+	)
+}
