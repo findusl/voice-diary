@@ -2,7 +2,9 @@ package de.lehrbaum.voiry.ui
 
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.ui.test.ExperimentalTestApi
+import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performTextInput
@@ -46,12 +48,7 @@ class MainScreenTest {
 			onNodeWithText("Transcript 3", substring = false).assertIsDisplayed()
 
 			// FAB should be hidden when recorder is not available
-			try {
-				onNodeWithText("Record", substring = false).assertIsDisplayed()
-				throw AssertionError("Record button should not be displayed when recorder is unavailable")
-			} catch (_: AssertionError) {
-				// Expected: node not found or not displayed
-			}
+			onAllNodesWithText("Record", substring = false).assertCountEquals(0)
 			// Info banner is shown
 			onNodeWithText("Audio recorder not available on this platform/device.", substring = false).assertIsDisplayed()
 		}
@@ -108,14 +105,9 @@ class MainScreenTest {
 			waitForIdle()
 
 			onNodeWithText("Recording 1", substring = false).assertIsDisplayed()
-			onNodeWithText("Delete", substring = false).performClick()
+			onAllNodesWithText("Delete", substring = false)[0].performClick()
 			waitForIdle()
-			try {
-				onNodeWithText("Recording 1", substring = false).assertIsDisplayed()
-				throw AssertionError("Recording 1 should have been deleted")
-			} catch (_: AssertionError) {
-				// Expected
-			}
+			onAllNodesWithText("Recording 1", substring = false).assertCountEquals(0)
 		}
 }
 
