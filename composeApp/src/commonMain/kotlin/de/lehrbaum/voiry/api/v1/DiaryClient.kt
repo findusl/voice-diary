@@ -31,6 +31,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.flow
@@ -56,6 +57,7 @@ open class DiaryClient(
 	private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
 
 	open val entries: StateFlow<List<VoiceDiaryEntry>> = flow {
+		var retryDelayMillis = 1_000L
 		while (currentCoroutineContext().isActive) {
 			try {
 				httpClient.sse("$baseUrl/v1/entries") {
@@ -67,11 +69,14 @@ open class DiaryClient(
 					}
 				}
 				Napier.i("SSE connection closed")
+				retryDelayMillis = 1_000L
 			} catch (e: Exception) {
 				if (e is CancellationException) {
 					break
 				}
 				Napier.e("SSE connection failed", e)
+				delay(retryDelayMillis)
+				retryDelayMillis = (retryDelayMillis * 2).coerceAtMost(60_000L)
 			}
 		}
 	}.runningFold(emptyList<VoiceDiaryEntry>()) { list, event -> applyEvent(list, event) }
