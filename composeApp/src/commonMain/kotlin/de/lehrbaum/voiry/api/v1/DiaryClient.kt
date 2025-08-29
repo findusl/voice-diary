@@ -11,6 +11,7 @@ import io.ktor.client.plugins.sse.sse
 import io.ktor.client.request.delete
 import io.ktor.client.request.forms.MultiPartFormDataContent
 import io.ktor.client.request.forms.formData
+import io.ktor.client.request.get
 import io.ktor.client.request.header
 import io.ktor.client.request.post
 import io.ktor.client.request.put
@@ -148,6 +149,12 @@ open class DiaryClient(
 				throw ServerResponseException(response, text)
 			}
 		}
+	}
+
+	open suspend fun getAudio(id: Uuid): ByteArray {
+		val response = httpClient.get("$baseUrl/v1/entries/$id/audio")
+		throwIfFailed(response)
+		return response.body()
 	}
 
 	private suspend fun throwIfFailed(response: HttpResponse) {

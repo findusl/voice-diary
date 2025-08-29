@@ -17,6 +17,7 @@ import io.ktor.http.HttpStatusCode
 import io.ktor.serialization.kotlinx.json.json
 import io.ktor.server.response.respond
 import io.ktor.server.routing.delete
+import io.ktor.server.routing.get
 import io.ktor.server.routing.post
 import io.ktor.server.routing.put
 import io.ktor.server.routing.routing
@@ -25,6 +26,7 @@ import io.ktor.server.testing.testApplication
 import java.nio.file.Files
 import kotlin.test.BeforeTest
 import kotlin.test.Test
+import kotlin.test.assertContentEquals
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertTrue
@@ -227,6 +229,54 @@ class DiaryClientTest {
 			createDiaryClientAgainstMockKtorApplication().use { client: DiaryClient ->
 				assertFailsWith<ServerResponseException> {
 					runBlocking { client.deleteEntry(Uuid.random()) }
+				}
+			}
+		}
+
+	@Test
+	fun `get audio success`() =
+		testApplication {
+			val service = runBlocking {
+				DiaryServiceImpl.create(
+					DiaryRepository(Files.createTempDirectory("clientTestGetAudio")),
+				)
+			}
+			val entry = sampleEntry(Uuid.random())
+			val audio = byteArrayOf(1, 2, 3)
+			runBlocking { service.addEntry(entry, audio) }
+			application { module(service) }
+			createDiaryClientAgainstMockKtorApplication().use { client: DiaryClient ->
+				val result = runBlocking { client.getAudio(entry.id) }
+				assertContentEquals(audio, result)
+			}
+		}
+
+	@Test
+	fun `get audio 404`() =
+		testApplication {
+			application {
+				routing { get("/v1/entries/{id}/audio") { call.respond(HttpStatusCode.NotFound) } }
+			}
+			createDiaryClientAgainstMockKtorApplication().use { client: DiaryClient ->
+				assertFailsWith<ClientRequestException> {
+					runBlocking { client.getAudio(Uuid.random()) }
+				}
+			}
+		}
+
+	@Test
+	fun `get audio 500`() =
+		testApplication {
+			application {
+				routing {
+					get("/v1/entries/{id}/audio") {
+						call.respond(HttpStatusCode.InternalServerError)
+					}
+				}
+			}
+			createDiaryClientAgainstMockKtorApplication().use { client: DiaryClient ->
+				assertFailsWith<ServerResponseException> {
+					runBlocking { client.getAudio(Uuid.random()) }
 				}
 			}
 		}
