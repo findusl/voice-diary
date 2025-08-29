@@ -26,6 +26,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
@@ -66,7 +67,9 @@ fun MainScreen(
 	var isRecording by remember { mutableStateOf(false) }
 	var pendingRecording by remember { mutableStateOf<Buffer?>(null) }
 	var pendingTitle by remember { mutableStateOf("") }
-	val canTranscribe = remember(transcriber) { transcriber != null && isWhisperAvailable() }
+	val canTranscribe by produceState(initialValue = false, transcriber) {
+		value = transcriber != null && isWhisperAvailable()
+	}
 
 	DisposableEffect(recorder) {
 		onDispose {
