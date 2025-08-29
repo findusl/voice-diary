@@ -1,5 +1,6 @@
 package de.lehrbaum.voiry.ui
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -60,6 +61,7 @@ fun MainScreen(
 	recorder: Recorder = platformRecorder,
 	onRequestAudioPermission: (() -> Unit)? = null,
 	transcriber: Transcriber? = platformTranscriber,
+	onEntryClick: (VoiceDiaryEntry) -> Unit,
 ) {
 	val scope = rememberCoroutineScope()
 	val entries by diaryClient.entries.collectAsStateWithLifecycle()
@@ -193,6 +195,7 @@ fun MainScreen(
 									} else {
 										null
 									},
+								onClick = { onEntryClick(entry) },
 							)
 						}
 					}
@@ -247,8 +250,10 @@ private fun EntryRow(
 	entry: VoiceDiaryEntry,
 	onDelete: (VoiceDiaryEntry) -> Unit,
 	onTranscribe: ((VoiceDiaryEntry) -> Unit)? = null,
+	onClick: () -> Unit,
 ) {
 	ListItem(
+		modifier = Modifier.fillMaxWidth().clickable { onClick() },
 		headlineContent = { Text(entry.title) },
 		supportingContent = {
 			Text(entry.transcriptionText ?: entry.transcriptionStatus.name)
