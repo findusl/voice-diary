@@ -64,7 +64,6 @@ fun EntryDetailScreen(
 
 	DisposableEffect(player) {
 		onDispose {
-			player.stop()
 			player.close()
 		}
 	}
@@ -88,13 +87,13 @@ fun EntryDetailScreen(
 		) {
 			Text("Recorded at: ${entry.recordedAt}")
 			Text(entry.transcriptionText ?: entry.transcriptionStatus.name)
-			if (audio != null) {
+			audio?.let { data ->
 				TextButton(
 					onClick = {
 						if (isPlaying) {
 							player.stop()
 						} else {
-							player.play(audio!!)
+							player.play(data)
 						}
 						isPlaying = !isPlaying
 					},
@@ -103,26 +102,28 @@ fun EntryDetailScreen(
 				}
 			}
 			Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-				if (canTranscribe && audio != null) {
-					TextButton(
-						onClick = {
-							scope.launch {
-								runCatching {
-									val buffer = Buffer().apply { write(audio!!) }
-									val text = transcriber!!.transcribe(buffer)
-									diaryClient.updateTranscription(
-										entry.id,
-										UpdateTranscriptionRequest(
-											text,
-											TranscriptionStatus.DONE,
-											Clock.System.now(),
-										),
-									)
-								}.onFailure { e -> error = e.message }
-							}
-						},
-					) {
-						Text("Re-transcribe")
+				if (canTranscribe) {
+					audio?.let { data ->
+						TextButton(
+							onClick = {
+								scope.launch {
+									runCatching {
+										val buffer = Buffer().apply { write(data) }
+										val text = transcriber!!.transcribe(buffer)
+										diaryClient.updateTranscription(
+											entry.id,
+											UpdateTranscriptionRequest(
+												text,
+												TranscriptionStatus.DONE,
+												Clock.System.now(),
+											),
+										)
+									}.onFailure { e -> error = e.message }
+								}
+							},
+						) {
+							Text("Re-transcribe")
+						}
 					}
 				}
 				TextButton(
