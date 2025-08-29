@@ -47,7 +47,7 @@ class MainScreenTest {
 			setContent {
 				CompositionLocalProvider(LocalLifecycleOwner provides FakeLifecycleOwner()) {
 					MaterialTheme {
-						MainScreen(diaryClient = client, recorder = unavailableRecorder)
+						MainScreen(diaryClient = client, recorder = unavailableRecorder, onEntryClick = { })
 					}
 				}
 			}
@@ -84,7 +84,7 @@ class MainScreenTest {
 			setContent {
 				CompositionLocalProvider(LocalLifecycleOwner provides FakeLifecycleOwner()) {
 					MaterialTheme {
-						MainScreen(diaryClient = client, recorder)
+						MainScreen(diaryClient = client, recorder, onEntryClick = { })
 					}
 				}
 			}
@@ -119,7 +119,7 @@ class MainScreenTest {
 			setContent {
 				CompositionLocalProvider(LocalLifecycleOwner provides FakeLifecycleOwner()) {
 					MaterialTheme {
-						MainScreen(diaryClient = client, recorder)
+						MainScreen(diaryClient = client, recorder, onEntryClick = { })
 					}
 				}
 			}
