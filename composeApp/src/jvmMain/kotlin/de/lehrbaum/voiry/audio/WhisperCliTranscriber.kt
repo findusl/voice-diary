@@ -10,6 +10,9 @@ import kotlinx.serialization.json.Json
 /** Desktop transcriber backed by the `whisper-cli` executable. */
 class WhisperCliTranscriber(
 	private val modelPath: String = "whisper-models/ggml-large-v3-turbo.bin",
+	private val processRunner: (List<String>) -> Int = { command ->
+		ProcessBuilder(command).start().waitFor()
+	},
 ) : Transcriber {
 	override suspend fun transcribe(buffer: Buffer): String {
 		// Write buffer to temporary wav file
@@ -24,8 +27,7 @@ class WhisperCliTranscriber(
 			tmp.absolutePath,
 			"--output-json",
 		)
-		val process = ProcessBuilder(command).start()
-		val exit = process.waitFor()
+		val exit = processRunner(command)
 		if (exit != 0) throw RuntimeException("whisper-cli failed with exit code $exit")
 
 		val jsonFile = File(tmp.absolutePath + ".json")
