@@ -1,3 +1,3 @@
 package de.lehrbaum.voiry.audio
 
-expect fun isWhisperAvailable(): Boolean
+expect suspend fun isWhisperAvailable(): Boolean
