@@ -34,9 +34,14 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import de.lehrbaum.voiry.api.v1.DiaryClient
+import de.lehrbaum.voiry.api.v1.TranscriptionStatus
+import de.lehrbaum.voiry.api.v1.UpdateTranscriptionRequest
 import de.lehrbaum.voiry.api.v1.VoiceDiaryEntry
 import de.lehrbaum.voiry.audio.Recorder
+import de.lehrbaum.voiry.audio.Transcriber
+import de.lehrbaum.voiry.audio.isWhisperAvailable
 import de.lehrbaum.voiry.audio.platformRecorder
+import de.lehrbaum.voiry.audio.platformTranscriber
 import kotlin.time.Clock
 import kotlin.time.Duration
 import kotlin.time.ExperimentalTime
@@ -45,6 +50,7 @@ import kotlin.uuid.Uuid
 import kotlinx.coroutines.launch
 import kotlinx.io.Buffer
 import kotlinx.io.readByteArray
+import kotlinx.io.write
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalTime::class, ExperimentalUuidApi::class)
 @Composable
@@ -52,6 +58,7 @@ fun MainScreen(
 	diaryClient: DiaryClient,
 	recorder: Recorder = platformRecorder,
 	onRequestAudioPermission: (() -> Unit)? = null,
+	transcriber: Transcriber? = platformTranscriber,
 ) {
 	val scope = rememberCoroutineScope()
 	val entries by diaryClient.entries.collectAsStateWithLifecycle()
@@ -59,6 +66,7 @@ fun MainScreen(
 	var isRecording by remember { mutableStateOf(false) }
 	var pendingRecording by remember { mutableStateOf<Buffer?>(null) }
 	var pendingTitle by remember { mutableStateOf("") }
+	val canTranscribe = remember(transcriber) { transcriber != null && isWhisperAvailable() }
 
 	DisposableEffect(recorder) {
 		onDispose {
@@ -137,12 +145,52 @@ fun MainScreen(
 						contentPadding = PaddingValues(vertical = 8.dp),
 					) {
 						items(entries, key = { it.id }) { entry ->
-							EntryRow(entry) {
-								scope.launch {
-									runCatching { diaryClient.deleteEntry(it.id) }
-										.onFailure { e -> error = e.message }
-								}
-							}
+							EntryRow(
+								entry = entry,
+								onDelete = { toDelete ->
+									scope.launch {
+										runCatching {
+											diaryClient.deleteEntry(toDelete.id)
+										}.onFailure { e ->
+											error = e.message
+										}
+									}
+								},
+								onTranscribe =
+									if (canTranscribe) {
+										{ toTranscribe ->
+											scope.launch {
+												runCatching {
+													val bytes = diaryClient.getAudio(toTranscribe.id)
+													val buffer = Buffer().apply { write(bytes) }
+													val text = transcriber!!.transcribe(buffer)
+													diaryClient.updateTranscription(
+														toTranscribe.id,
+														UpdateTranscriptionRequest(
+															text,
+															TranscriptionStatus.DONE,
+															Clock.System.now(),
+														),
+													)
+												}.onFailure { e ->
+													error = e.message
+													runCatching {
+														diaryClient.updateTranscription(
+															toTranscribe.id,
+															UpdateTranscriptionRequest(
+																null,
+																TranscriptionStatus.FAILED,
+																Clock.System.now(),
+															),
+														)
+													}
+												}
+											}
+										}
+									} else {
+										null
+									},
+							)
 						}
 					}
 				}
@@ -192,14 +240,23 @@ fun MainScreen(
 }
 
 @Composable
-private fun EntryRow(entry: VoiceDiaryEntry, onDelete: (VoiceDiaryEntry) -> Unit) {
+private fun EntryRow(
+	entry: VoiceDiaryEntry,
+	onDelete: (VoiceDiaryEntry) -> Unit,
+	onTranscribe: ((VoiceDiaryEntry) -> Unit)? = null,
+) {
 	ListItem(
 		headlineContent = { Text(entry.title) },
 		supportingContent = {
 			Text(entry.transcriptionText ?: entry.transcriptionStatus.name)
 		},
 		trailingContent = {
-			TextButton(onClick = { onDelete(entry) }) { Text("Delete") }
+			Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+				if (onTranscribe != null) {
+					TextButton(onClick = { onTranscribe(entry) }) { Text("Transcribe") }
+				}
+				TextButton(onClick = { onDelete(entry) }) { Text("Delete") }
+			}
 		},
 	)
 	HorizontalDivider()
