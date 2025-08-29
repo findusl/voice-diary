@@ -11,6 +11,7 @@ import io.ktor.client.plugins.sse.sse
 import io.ktor.client.request.delete
 import io.ktor.client.request.forms.MultiPartFormDataContent
 import io.ktor.client.request.forms.formData
+import io.ktor.client.request.get
 import io.ktor.client.request.header
 import io.ktor.client.request.post
 import io.ktor.client.request.put
@@ -31,6 +32,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.flow
@@ -56,6 +58,7 @@ open class DiaryClient(
 	private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
 
 	open val entries: StateFlow<List<VoiceDiaryEntry>> = flow {
+		var retryDelayMillis = 1_000L
 		while (currentCoroutineContext().isActive) {
 			try {
 				httpClient.sse("$baseUrl/v1/entries") {
@@ -67,11 +70,14 @@ open class DiaryClient(
 					}
 				}
 				Napier.i("SSE connection closed")
+				retryDelayMillis = 1_000L
 			} catch (e: Exception) {
 				if (e is CancellationException) {
 					break
 				}
 				Napier.e("SSE connection failed", e)
+				delay(retryDelayMillis)
+				retryDelayMillis = (retryDelayMillis * 2).coerceAtMost(60_000L)
 			}
 		}
 	}.runningFold(emptyList<VoiceDiaryEntry>()) { list, event -> applyEvent(list, event) }
@@ -143,6 +149,12 @@ open class DiaryClient(
 				throw ServerResponseException(response, text)
 			}
 		}
+	}
+
+	open suspend fun getAudio(id: Uuid): ByteArray {
+		val response = httpClient.get("$baseUrl/v1/entries/$id/audio")
+		throwIfFailed(response)
+		return response.body()
 	}
 
 	private suspend fun throwIfFailed(response: HttpResponse) {
