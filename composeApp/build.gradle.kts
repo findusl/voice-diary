@@ -47,6 +47,7 @@ kotlin {
 			implementation(libs.ktor.serializationKotlinxJson)
 			implementation(libs.ktor.clientCio)
 			api(libs.napier)
+			implementation(libs.lexilabs.basic.sound)
 		}
 		commonTest.dependencies {
 			implementation(libs.kotlin.test)
