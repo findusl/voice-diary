@@ -22,14 +22,17 @@ import dev.mokkery.every
 import dev.mokkery.mock
 import dev.mokkery.verify
 import io.ktor.client.HttpClient
-import kotlin.time.Clock
 import kotlin.time.Duration
 import kotlin.time.ExperimentalTime
+import kotlin.time.Instant
 import kotlin.uuid.ExperimentalUuidApi
 import kotlin.uuid.Uuid
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.datetime.TimeZone
+import kotlinx.datetime.toLocalDateTime
 import org.junit.Test
 import org.junit.experimental.categories.Category
+import kotlinx.datetime.Instant as KInstant
 
 @OptIn(ExperimentalTestApi::class, ExperimentalTime::class, ExperimentalUuidApi::class)
 @Category(UiTest::class)
@@ -37,10 +40,11 @@ class EntryDetailScreenTest {
 	@Test
 	fun displays_entry_details_and_toggles_playback() =
 		runComposeUiTest {
+			val recordedAt = Instant.fromEpochMilliseconds(1709296440000)
 			val entry = VoiceDiaryEntry(
 				id = Uuid.random(),
 				title = "Recording 1",
-				recordedAt = Clock.System.now(),
+				recordedAt = recordedAt,
 				duration = Duration.ZERO,
 				transcriptionText = "Transcript 1",
 				transcriptionStatus = TranscriptionStatus.DONE,
@@ -66,6 +70,18 @@ class EntryDetailScreenTest {
 
 			waitForIdle()
 
+			val expectedLocal = KInstant
+				.fromEpochMilliseconds(recordedAt.toEpochMilliseconds())
+				.toLocalDateTime(TimeZone.currentSystemDefault())
+			val expectedFormatted = buildString {
+				append(expectedLocal.date)
+				append(' ')
+				append(expectedLocal.hour.toString().padStart(2, '0'))
+				append(':')
+				append(expectedLocal.minute.toString().padStart(2, '0'))
+			}
+
+			onNodeWithText("Recorded at: $expectedFormatted", substring = false).assertIsDisplayed()
 			onNodeWithText("Transcript 1", substring = false).assertIsDisplayed()
 			onNodeWithText("Play", substring = false).assertIsDisplayed()
 			onNodeWithText("Play", substring = false).performClick()
@@ -81,10 +97,11 @@ class EntryDetailScreenTest {
 	@Test
 	fun delete_calls_client_and_navigates_back() =
 		runComposeUiTest {
+			val recordedAt = Instant.fromEpochMilliseconds(1709296440000)
 			val entry = VoiceDiaryEntry(
 				id = Uuid.random(),
 				title = "Recording 1",
-				recordedAt = Clock.System.now(),
+				recordedAt = recordedAt,
 				duration = Duration.ZERO,
 				transcriptionText = "Transcript 1",
 				transcriptionStatus = TranscriptionStatus.DONE,
