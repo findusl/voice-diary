@@ -64,7 +64,9 @@ fun EntryDetailScreen(
 
 	DisposableEffect(player) {
 		onDispose {
-			player.close()
+			if (player !== platformPlayer) {
+				player.close()
+			}
 		}
 	}
 
