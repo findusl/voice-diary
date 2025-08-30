@@ -53,7 +53,6 @@ class MainViewModel(
 
 	override fun close() {
 		runCatching { recorder.close() }
-		runCatching { diaryClient.close() }
 	}
 
 	fun startRecording() {
