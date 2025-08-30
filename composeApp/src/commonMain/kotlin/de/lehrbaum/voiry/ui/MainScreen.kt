@@ -24,35 +24,20 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.TextField
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.produceState
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.viewmodel.compose.viewModel
 import de.lehrbaum.voiry.api.v1.DiaryClient
-import de.lehrbaum.voiry.api.v1.TranscriptionStatus
-import de.lehrbaum.voiry.api.v1.UpdateTranscriptionRequest
 import de.lehrbaum.voiry.api.v1.VoiceDiaryEntry
 import de.lehrbaum.voiry.audio.Recorder
 import de.lehrbaum.voiry.audio.Transcriber
-import de.lehrbaum.voiry.audio.isWhisperAvailable
 import de.lehrbaum.voiry.audio.platformRecorder
 import de.lehrbaum.voiry.audio.platformTranscriber
-import kotlin.time.Clock
-import kotlin.time.Duration
 import kotlin.time.ExperimentalTime
 import kotlin.uuid.ExperimentalUuidApi
-import kotlin.uuid.Uuid
-import kotlinx.coroutines.launch
-import kotlinx.io.Buffer
-import kotlinx.io.readByteArray
-import kotlinx.io.write
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalTime::class, ExperimentalUuidApi::class)
 @Composable
@@ -63,61 +48,16 @@ fun MainScreen(
 	transcriber: Transcriber? = platformTranscriber,
 	onEntryClick: (VoiceDiaryEntry) -> Unit,
 ) {
-	val scope = rememberCoroutineScope()
-	val entries by diaryClient.entries.collectAsStateWithLifecycle()
-	var error by remember { mutableStateOf<String?>(null) }
-	var isRecording by remember { mutableStateOf(false) }
-	var pendingRecording by remember { mutableStateOf<Buffer?>(null) }
-	var pendingTitle by remember { mutableStateOf("") }
-	val canTranscribe by produceState(initialValue = false, transcriber) {
-		value = transcriber != null && isWhisperAvailable()
-	}
-
-	DisposableEffect(recorder) {
-		onDispose {
-			try {
-				recorder.close()
-			} catch (_: Throwable) {
-			}
-		}
-	}
+	val viewModel = viewModel { MainViewModel(diaryClient, recorder, transcriber) }
+	val state by viewModel.uiState.collectAsStateWithLifecycle()
 
 	Scaffold(
-		topBar = {
-			TopAppBar(title = { Text("Voice Diary") })
-		},
+		topBar = { TopAppBar(title = { Text("Voice Diary") }) },
 		floatingActionButton = {
-			if (recorder.isAvailable) {
-				ExtendedFloatingActionButton(
-					onClick = {
-						if (!isRecording) {
-							val result = runCatching { recorder.startRecording() }
-							result
-								.onSuccess {
-									isRecording = true
-									error = null
-								}.onFailure { e ->
-									isRecording = false
-									error = e.message ?: "Failed to start recording"
-								}
-						} else {
-							scope.launch {
-								val stopResult = recorder.stopRecording()
-								stopResult
-									.onSuccess { buffer ->
-										pendingRecording = buffer
-										isRecording = false
-										error = null
-									}.onFailure { e ->
-										error = e.message
-										isRecording = false
-									}
-							}
-						}
-					},
-				) {
-					Text(if (isRecording) "Stop" else "Record")
-				}
+			if (state.recorderAvailable) {
+				ExtendedFloatingActionButton(onClick = {
+					if (!state.isRecording) viewModel.startRecording() else viewModel.stopRecording()
+				}) { Text(if (state.isRecording) "Stop" else "Record") }
 			}
 		},
 	) { padding ->
@@ -126,19 +66,20 @@ fun MainScreen(
 				.padding(padding)
 				.fillMaxSize(),
 		) {
-			if (!recorder.isAvailable) {
+			if (!state.recorderAvailable) {
 				InfoBanner("Audio recorder not available on this platform/device.")
 			}
-			if (error != null) {
-				val permissionRelated = error?.contains("permission", ignoreCase = true) == true && onRequestAudioPermission != null
+			if (state.error != null) {
+				val permissionRelated =
+					state.error?.contains("permission", ignoreCase = true) == true && onRequestAudioPermission != null
 				InfoBanner(
-					text = "Error: $error",
+					text = "Error: ${state.error}",
 					actionLabel = if (permissionRelated) "Grant permission" else null,
 					onAction = if (permissionRelated) onRequestAudioPermission else null,
 				)
 			}
 			when {
-				entries.isEmpty() -> {
+				state.entries.isEmpty() -> {
 					Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
 						Text("No recordings yet. Tap Record to add one.")
 					}
@@ -149,49 +90,13 @@ fun MainScreen(
 						modifier = Modifier.fillMaxSize(),
 						contentPadding = PaddingValues(vertical = 8.dp),
 					) {
-						items(entries, key = { it.id }) { entry ->
+						items(state.entries, key = { it.id }) { entry ->
 							EntryRow(
 								entry = entry,
-								onDelete = { toDelete ->
-									scope.launch {
-										runCatching {
-											diaryClient.deleteEntry(toDelete.id)
-										}.onFailure { e ->
-											error = e.message
-										}
-									}
-								},
+								onDelete = { viewModel.deleteEntry(it) },
 								onTranscribe =
-									if (canTranscribe) {
-										{ toTranscribe ->
-											scope.launch {
-												runCatching {
-													val bytes = diaryClient.getAudio(toTranscribe.id)
-													val buffer = Buffer().apply { write(bytes) }
-													val text = transcriber!!.transcribe(buffer)
-													diaryClient.updateTranscription(
-														toTranscribe.id,
-														UpdateTranscriptionRequest(
-															text,
-															TranscriptionStatus.DONE,
-															Clock.System.now(),
-														),
-													)
-												}.onFailure { e ->
-													error = e.message
-													runCatching {
-														diaryClient.updateTranscription(
-															toTranscribe.id,
-															UpdateTranscriptionRequest(
-																null,
-																TranscriptionStatus.FAILED,
-																Clock.System.now(),
-															),
-														)
-													}
-												}
-											}
-										}
+									if (state.canTranscribe) {
+										{ viewModel.transcribe(it) }
 									} else {
 										null
 									},
@@ -204,42 +109,25 @@ fun MainScreen(
 		}
 	}
 
-	if (pendingRecording != null) {
+	if (state.pendingRecording != null) {
 		AlertDialog(
-			onDismissRequest = { pendingRecording = null },
+			onDismissRequest = { viewModel.cancelSaveRecording() },
 			title = { Text("Save Recording") },
 			text = {
 				TextField(
-					value = pendingTitle,
-					onValueChange = { pendingTitle = it },
+					value = state.pendingTitle,
+					onValueChange = viewModel::updatePendingTitle,
 					label = { Text("Title") },
 				)
 			},
 			confirmButton = {
 				TextButton(
-					onClick = {
-						val buffer = pendingRecording
-						if (buffer != null) {
-							scope.launch {
-								val bytes = buffer.readByteArray()
-								val entry = VoiceDiaryEntry(
-									id = Uuid.random(),
-									title = pendingTitle,
-									recordedAt = Clock.System.now(),
-									duration = Duration.ZERO,
-								)
-								runCatching { diaryClient.createEntry(entry, bytes) }
-									.onFailure { e -> error = e.message }
-								pendingRecording = null
-								pendingTitle = ""
-							}
-						}
-					},
-					enabled = pendingTitle.isNotBlank(),
+					onClick = { viewModel.saveRecording() },
+					enabled = state.pendingTitle.isNotBlank(),
 				) { Text("Save") }
 			},
 			dismissButton = {
-				TextButton(onClick = { pendingRecording = null }) { Text("Cancel") }
+				TextButton(onClick = { viewModel.cancelSaveRecording() }) { Text("Cancel") }
 			},
 		)
 	}
