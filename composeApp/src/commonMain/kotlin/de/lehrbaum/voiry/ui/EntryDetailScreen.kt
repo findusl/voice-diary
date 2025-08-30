@@ -47,8 +47,8 @@ fun EntryDetailScreen(
 	transcriber: Transcriber? = platformTranscriber,
 ) {
 	val scope = rememberCoroutineScope()
-	val entries by diaryClient.entries.collectAsStateWithLifecycle()
-	val entry = entries.firstOrNull { it.id == entryId } ?: return
+	val entryState by diaryClient.entryFlow(entryId).collectAsStateWithLifecycle(initialValue = null)
+	val entry = entryState ?: return
 	var audio by remember { mutableStateOf<ByteArray?>(null) }
 	var isPlaying by remember { mutableStateOf(false) }
 	var error by remember { mutableStateOf<String?>(null) }
