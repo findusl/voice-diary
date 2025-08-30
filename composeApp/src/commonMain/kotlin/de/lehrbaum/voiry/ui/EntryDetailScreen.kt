@@ -103,6 +103,13 @@ fun EntryDetailScreen(
 			}
 			Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
 				if (canTranscribe) {
+					val transcribeLabel =
+						when (entry.transcriptionStatus) {
+							TranscriptionStatus.NONE,
+							TranscriptionStatus.FAILED,
+							-> "Transcribe"
+							else -> "Re-transcribe"
+						}
 					audio?.let { data ->
 						TextButton(
 							onClick = {
@@ -122,7 +129,7 @@ fun EntryDetailScreen(
 								}
 							},
 						) {
-							Text("Re-transcribe")
+							Text(transcribeLabel)
 						}
 					}
 				}
