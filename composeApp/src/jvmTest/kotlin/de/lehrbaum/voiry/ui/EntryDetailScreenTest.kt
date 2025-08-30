@@ -115,6 +115,40 @@ class EntryDetailScreenTest {
 			assert(backCalled)
 			assert(client.entries.value.isEmpty())
 		}
+
+	@Test
+	fun displays_placeholder_when_no_transcription() =
+		runComposeUiTest {
+			val entry = VoiceDiaryEntry(
+				id = Uuid.random(),
+				title = "Recording 1",
+				recordedAt = Clock.System.now(),
+				duration = Duration.ZERO,
+				transcriptionText = null,
+				transcriptionStatus = TranscriptionStatus.NONE,
+			)
+			val client = EntryFakeDiaryClient(entry)
+			val player = mock<Player>(mode = MockMode.autoUnit)
+			every { player.isAvailable } returns true
+
+			setContent {
+				CompositionLocalProvider(LocalLifecycleOwner provides EntryFakeLifecycleOwner()) {
+					MaterialTheme {
+						EntryDetailScreen(
+							diaryClient = client,
+							entryId = entry.id,
+							onBack = {},
+							player = player,
+							transcriber = null,
+						)
+					}
+				}
+			}
+
+			waitForIdle()
+
+			onNodeWithText("Not yet transcribed", substring = false).assertIsDisplayed()
+		}
 }
 
 @OptIn(ExperimentalUuidApi::class, ExperimentalTime::class)

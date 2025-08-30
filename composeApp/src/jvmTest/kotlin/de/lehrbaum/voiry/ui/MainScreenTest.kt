@@ -143,6 +143,38 @@ class MainScreenTest {
 			waitForIdle()
 			onAllNodesWithText("Recording 1", substring = false).assertCountEquals(0)
 		}
+
+	@Test
+	fun shows_placeholder_when_transcription_missing() =
+		runComposeUiTest {
+			val entry = VoiceDiaryEntry(
+				id = Uuid.random(),
+				title = "Recording 1",
+				recordedAt = Clock.System.now(),
+				duration = Duration.ZERO,
+				transcriptionText = null,
+				transcriptionStatus = TranscriptionStatus.NONE,
+			)
+			val client = FakeDiaryClient(initial = listOf(entry))
+			val recorder = mock<Recorder>()
+			every { recorder.isAvailable } returns false
+
+			setContent {
+				CompositionLocalProvider(
+					LocalLifecycleOwner provides FakeLifecycleOwner(),
+					LocalViewModelStoreOwner provides FakeViewModelStoreOwner(),
+				) {
+					MaterialTheme {
+						MainScreen(diaryClient = client, recorder, onEntryClick = { })
+					}
+				}
+			}
+
+			waitForIdle()
+
+			onNodeWithText("Recording 1", substring = false).assertIsDisplayed()
+			onNodeWithText("Not yet transcribed", substring = false).assertIsDisplayed()
+		}
 }
 
 @OptIn(ExperimentalTime::class, ExperimentalUuidApi::class)
