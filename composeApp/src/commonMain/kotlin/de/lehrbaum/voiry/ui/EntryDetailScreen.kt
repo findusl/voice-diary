@@ -86,7 +86,7 @@ fun EntryDetailScreen(
 			verticalArrangement = Arrangement.spacedBy(12.dp),
 		) {
 			Text("Recorded at: ${entry.recordedAt}")
-			Text(entry.transcriptionText ?: entry.transcriptionStatus.name)
+			Text(entry.transcriptionText ?: entry.transcriptionStatus.displayName())
 			audio?.let { data ->
 				TextButton(
 					onClick = {
