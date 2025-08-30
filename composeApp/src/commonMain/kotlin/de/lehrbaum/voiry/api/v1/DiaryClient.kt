@@ -1,5 +1,6 @@
 package de.lehrbaum.voiry.api.v1
 
+import androidx.compose.runtime.Stable
 import io.github.aakira.napier.Napier
 import io.ktor.client.HttpClient
 import io.ktor.client.call.body
@@ -46,6 +47,7 @@ import kotlinx.serialization.json.Json
  *
  * Uses Server-Sent Events to keep [entries] updated.
  */
+@Stable
 @ExperimentalUuidApi
 @ExperimentalTime
 open class DiaryClient(
