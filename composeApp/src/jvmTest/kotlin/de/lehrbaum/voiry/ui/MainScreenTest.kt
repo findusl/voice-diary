@@ -13,7 +13,10 @@ import androidx.compose.ui.test.runComposeUiTest
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.LifecycleRegistry
+import androidx.lifecycle.ViewModelStore
+import androidx.lifecycle.ViewModelStoreOwner
 import androidx.lifecycle.compose.LocalLifecycleOwner
+import androidx.lifecycle.viewmodel.compose.LocalViewModelStoreOwner
 import de.lehrbaum.voiry.UiTest
 import de.lehrbaum.voiry.api.v1.DiaryClient
 import de.lehrbaum.voiry.api.v1.TranscriptionStatus
@@ -45,7 +48,10 @@ class MainScreenTest {
 			every { unavailableRecorder.isAvailable } returns false
 
 			setContent {
-				CompositionLocalProvider(LocalLifecycleOwner provides FakeLifecycleOwner()) {
+				CompositionLocalProvider(
+					LocalLifecycleOwner provides FakeLifecycleOwner(),
+					LocalViewModelStoreOwner provides FakeViewModelStoreOwner(),
+				) {
 					MaterialTheme {
 						MainScreen(diaryClient = client, recorder = unavailableRecorder, onEntryClick = { })
 					}
@@ -82,7 +88,10 @@ class MainScreenTest {
 			every { recorder.stopRecording() } returns Result.success(buffer)
 
 			setContent {
-				CompositionLocalProvider(LocalLifecycleOwner provides FakeLifecycleOwner()) {
+				CompositionLocalProvider(
+					LocalLifecycleOwner provides FakeLifecycleOwner(),
+					LocalViewModelStoreOwner provides FakeViewModelStoreOwner(),
+				) {
 					MaterialTheme {
 						MainScreen(diaryClient = client, recorder, onEntryClick = { })
 					}
@@ -117,7 +126,10 @@ class MainScreenTest {
 			every { recorder.isAvailable } returns false
 
 			setContent {
-				CompositionLocalProvider(LocalLifecycleOwner provides FakeLifecycleOwner()) {
+				CompositionLocalProvider(
+					LocalLifecycleOwner provides FakeLifecycleOwner(),
+					LocalViewModelStoreOwner provides FakeViewModelStoreOwner(),
+				) {
 					MaterialTheme {
 						MainScreen(diaryClient = client, recorder, onEntryClick = { })
 					}
@@ -170,4 +182,8 @@ private class FakeLifecycleOwner : LifecycleOwner {
 		currentState = Lifecycle.State.RESUMED
 	}
 	override val lifecycle: Lifecycle get() = registry
+}
+
+private class FakeViewModelStoreOwner : ViewModelStoreOwner {
+	override val viewModelStore: ViewModelStore = ViewModelStore()
 }

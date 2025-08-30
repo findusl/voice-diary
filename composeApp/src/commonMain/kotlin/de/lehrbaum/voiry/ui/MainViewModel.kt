@@ -53,11 +53,11 @@ class MainViewModel(
 
 	override fun close() {
 		runCatching { recorder.close() }
+		runCatching { diaryClient.close() }
 	}
 
 	fun startRecording() {
-		val result = runCatching { recorder.startRecording() }
-		result
+		runCatching { recorder.startRecording() }
 			.onSuccess {
 				_uiState.update { it.copy(isRecording = true, error = null) }
 			}.onFailure { e ->
