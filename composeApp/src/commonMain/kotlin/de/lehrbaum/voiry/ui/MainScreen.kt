@@ -25,6 +25,7 @@ import androidx.compose.material3.TextField
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
@@ -86,21 +87,25 @@ fun MainScreen(
 				}
 
 				else -> {
+					val onDelete = remember(viewModel) { viewModel::deleteEntry }
+					val onTranscribe = remember(viewModel) { viewModel::transcribe }
 					LazyColumn(
 						modifier = Modifier.fillMaxSize(),
 						contentPadding = PaddingValues(vertical = 8.dp),
 					) {
 						items(state.entries, key = { it.id }) { entry ->
+							val onClick = remember(entry.id, onEntryClick) {
+								{ onEntryClick(entry) }
+							}
 							EntryRow(
 								entry = entry,
-								onDelete = { viewModel.deleteEntry(it) },
-								onTranscribe =
-									if (state.canTranscribe) {
-										{ viewModel.transcribe(it) }
-									} else {
-										null
-									},
-								onClick = { onEntryClick(entry) },
+								onDelete = onDelete,
+								onTranscribe = if (state.canTranscribe) {
+									onTranscribe
+								} else {
+									null
+								},
+								onClick = onClick,
 							)
 						}
 					}
