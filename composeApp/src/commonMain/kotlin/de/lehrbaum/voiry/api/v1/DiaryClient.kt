@@ -34,7 +34,6 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.flow
@@ -87,7 +86,14 @@ open class DiaryClient(
 	}.runningFold(emptyList<VoiceDiaryEntry>()) { list, event -> applyEvent(list, event) }
 		.stateIn(scope, SharingStarted.WhileSubscribed(), emptyList())
 
-	open fun entryFlow(id: Uuid): Flow<VoiceDiaryEntry?> = entries.map { list -> list.firstOrNull { it.id == id } }
+	private val entryFlows = mutableMapOf<Uuid, StateFlow<VoiceDiaryEntry?>>()
+
+	open fun entryFlow(id: Uuid): StateFlow<VoiceDiaryEntry?> =
+		entryFlows.getOrPut(id) {
+			entries
+				.map { list -> list.firstOrNull { it.id == id } }
+				.stateIn(scope, SharingStarted.WhileSubscribed(), null)
+		}
 
 	override fun close() = scope.cancel()
 
