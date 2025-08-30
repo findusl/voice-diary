@@ -33,9 +33,11 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.runningFold
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.isActive
@@ -82,6 +84,8 @@ open class DiaryClient(
 		}
 	}.runningFold(emptyList<VoiceDiaryEntry>()) { list, event -> applyEvent(list, event) }
 		.stateIn(scope, SharingStarted.WhileSubscribed(), emptyList())
+
+	open fun entryFlow(id: Uuid): Flow<VoiceDiaryEntry?> = entries.map { list -> list.firstOrNull { it.id == id } }
 
 	override fun close() = scope.cancel()
 
