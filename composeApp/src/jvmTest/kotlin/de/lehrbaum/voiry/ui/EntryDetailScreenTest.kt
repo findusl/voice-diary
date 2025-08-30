@@ -16,6 +16,7 @@ import de.lehrbaum.voiry.api.v1.DiaryClient
 import de.lehrbaum.voiry.api.v1.TranscriptionStatus
 import de.lehrbaum.voiry.api.v1.VoiceDiaryEntry
 import de.lehrbaum.voiry.audio.Player
+import de.lehrbaum.voiry.audio.Transcriber
 import dev.mokkery.MockMode
 import dev.mokkery.answering.returns
 import dev.mokkery.every
@@ -76,6 +77,41 @@ class EntryDetailScreenTest {
 			waitForIdle()
 			verify { player.stop() }
 			onNodeWithText("Play", substring = false).assertIsDisplayed()
+		}
+
+	@Test
+	fun transcribe_button_shows_transcribe_for_none_status() =
+		runComposeUiTest {
+			val entry = VoiceDiaryEntry(
+				id = Uuid.random(),
+				title = "Recording 1",
+				recordedAt = Clock.System.now(),
+				duration = Duration.ZERO,
+				transcriptionStatus = TranscriptionStatus.NONE,
+			)
+			val audio = byteArrayOf(1)
+			val client = EntryFakeDiaryClient(entry, audio)
+			val player = mock<Player>(mode = MockMode.autoUnit)
+			val transcriber = mock<Transcriber>(mode = MockMode.autoUnit)
+			every { player.isAvailable } returns true
+
+			setContent {
+				CompositionLocalProvider(LocalLifecycleOwner provides EntryFakeLifecycleOwner()) {
+					MaterialTheme {
+						EntryDetailScreen(
+							diaryClient = client,
+							entryId = entry.id,
+							onBack = {},
+							player = player,
+							transcriber = transcriber,
+						)
+					}
+				}
+			}
+
+			waitForIdle()
+
+			onNodeWithText("Transcribe", substring = false).assertIsDisplayed()
 		}
 
 	@Test
