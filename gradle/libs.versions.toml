@@ -20,6 +20,7 @@ kotlinx-serialization = "1.9.0"
 exposed = "0.61.0"
 sqlite = "3.50.3.0"
 appdirs = "2.0.0"
+lexilabs-basic = "+"
 
 [libraries]
 kotlin-test = { module = "org.jetbrains.kotlin:kotlin-test", version.ref = "kotlin" }
@@ -48,6 +49,7 @@ exposed-core = { module = "org.jetbrains.exposed:exposed-core", version.ref = "e
 exposed-jdbc = { module = "org.jetbrains.exposed:exposed-jdbc", version.ref = "exposed" }
 sqlite = { module = "org.xerial:sqlite-jdbc", version.ref = "sqlite" }
 appdirs = { module = "ca.gosyer:kotlin-multiplatform-appdirs", version.ref = "appdirs" }
+lexilabs-basic-sound = { module = "app.lexilabs.basic:basic-sound", version.ref = "lexilabs-basic" }
 
 [plugins]
 androidApplication = { id = "com.android.application", version.ref = "agp" }
