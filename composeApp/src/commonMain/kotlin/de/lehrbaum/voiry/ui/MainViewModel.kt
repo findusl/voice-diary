@@ -1,5 +1,6 @@
 package de.lehrbaum.voiry.ui
 
+import androidx.compose.runtime.Stable
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import de.lehrbaum.voiry.api.v1.DiaryClient
@@ -71,8 +72,13 @@ class MainViewModel(
 			val stopResult = recorder.stopRecording()
 			stopResult
 				.onSuccess { buffer ->
+					val bytes = buffer.readByteArray()
 					_uiState.update {
-						it.copy(pendingRecording = buffer, isRecording = false, error = null)
+						it.copy(
+							pendingRecording = Recording(bytes),
+							isRecording = false,
+							error = null,
+						)
 					}
 				}.onFailure { e ->
 					_uiState.update { it.copy(isRecording = false, error = e.message) }
@@ -89,10 +95,10 @@ class MainViewModel(
 	}
 
 	fun saveRecording() {
-		val buffer = _uiState.value.pendingRecording ?: return
+		val recording = _uiState.value.pendingRecording ?: return
 		val title = _uiState.value.pendingTitle
 		viewModelScope.launch {
-			val bytes = buffer.readByteArray()
+			val bytes = recording.data
 			val entry = VoiceDiaryEntry(
 				id = Uuid.random(),
 				title = title,
@@ -148,9 +154,12 @@ class MainViewModel(
 data class MainUiState(
 	val entries: List<VoiceDiaryEntry> = emptyList(),
 	val isRecording: Boolean = false,
-	val pendingRecording: Buffer? = null,
+	val pendingRecording: Recording? = null,
 	val pendingTitle: String = "",
 	val error: String? = null,
 	val canTranscribe: Boolean = false,
 	val recorderAvailable: Boolean = true,
 )
+
+@Stable
+data class Recording(val data: ByteArray)
