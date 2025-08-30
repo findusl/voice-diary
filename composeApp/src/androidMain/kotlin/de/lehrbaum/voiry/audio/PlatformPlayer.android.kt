@@ -17,7 +17,10 @@ actual val platformPlayer: Player = object : Player {
 		val file = File.createTempFile("entry", ".wav")
 		file.writeBytes(audio)
 		tempFile = file
-		this.audio = Audio(file.absolutePath, true)
+		this.audio = Audio(file.absolutePath).also {
+			it.load()
+			it.play()
+		}
 	}
 
 	override fun stop() {
