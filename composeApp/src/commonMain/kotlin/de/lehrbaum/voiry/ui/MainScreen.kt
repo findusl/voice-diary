@@ -149,7 +149,7 @@ private fun EntryRow(
 		modifier = Modifier.fillMaxWidth().clickable { onClick() },
 		headlineContent = { Text(entry.title) },
 		supportingContent = {
-			Text(entry.transcriptionText ?: entry.transcriptionStatus.name)
+			Text(entry.transcriptionText ?: entry.transcriptionStatus.displayName())
 		},
 		trailingContent = {
 			Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
