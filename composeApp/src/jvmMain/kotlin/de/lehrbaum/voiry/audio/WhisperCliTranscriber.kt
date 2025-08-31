@@ -1,5 +1,6 @@
 package de.lehrbaum.voiry.audio
 
+import io.github.aakira.napier.Napier
 import java.io.File
 import kotlin.io.path.createTempFile
 import kotlinx.coroutines.Dispatchers
@@ -8,6 +9,8 @@ import kotlinx.io.Buffer
 import kotlinx.io.readByteArray
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
+
+private const val TAG = "WhisperCliTranscriber"
 
 /** Desktop transcriber backed by the `whisper-cli` executable. */
 class WhisperCliTranscriber(
@@ -31,8 +34,20 @@ class WhisperCliTranscriber(
 					tmp.absolutePath,
 					"--output-json",
 				)
+				Napier.d("Running: ${command.joinToString(" ")}", tag = TAG)
 				val exit = processRunner(command)
-				if (exit != 0) throw RuntimeException("whisper-cli failed with exit code $exit")
+				if (exit != 0) {
+					Napier.e(
+						"whisper-cli exited $exit: ${command.joinToString(" ")}",
+						tag = TAG,
+					)
+					throw RuntimeException("whisper-cli failed with exit code $exit")
+				} else {
+					Napier.i(
+						"whisper-cli exited $exit: ${command.joinToString(" ")}",
+						tag = TAG,
+					)
+				}
 
 				if (!jsonFile.exists()) throw RuntimeException("JSON output file not found: ${jsonFile.absolutePath}")
 
