@@ -45,6 +45,7 @@ fun EntryDetailScreen(
 	onBack: () -> Unit,
 	player: Player = platformPlayer,
 	transcriber: Transcriber? = platformTranscriber,
+	isWhisperAvailable: suspend () -> Boolean = ::isWhisperAvailable,
 ) {
 	val scope = rememberCoroutineScope()
 	val entryFlow = remember(entryId) { diaryClient.entryFlow(entryId) }
@@ -52,7 +53,7 @@ fun EntryDetailScreen(
 	var audio by remember { mutableStateOf<ByteArray?>(null) }
 	var isPlaying by remember { mutableStateOf(false) }
 	var error by remember { mutableStateOf<String?>(null) }
-	val canTranscribe by produceState(initialValue = false, transcriber) {
+	val canTranscribe by produceState(initialValue = false, transcriber, isWhisperAvailable) {
 		value = transcriber != null && isWhisperAvailable()
 	}
 

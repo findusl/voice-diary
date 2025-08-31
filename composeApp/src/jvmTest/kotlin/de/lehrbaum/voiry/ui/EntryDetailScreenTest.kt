@@ -104,6 +104,7 @@ class EntryDetailScreenTest {
 							onBack = {},
 							player = player,
 							transcriber = transcriber,
+							isWhisperAvailable = { true },
 						)
 					}
 				}
