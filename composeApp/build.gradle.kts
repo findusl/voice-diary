@@ -48,6 +48,7 @@ kotlin {
 			implementation(libs.ktor.clientCio)
 			api(libs.napier)
 			implementation(libs.lexilabs.basic.sound)
+			implementation(libs.kotlinx.datetime)
 		}
 		commonTest.dependencies {
 			implementation(libs.kotlin.test)
