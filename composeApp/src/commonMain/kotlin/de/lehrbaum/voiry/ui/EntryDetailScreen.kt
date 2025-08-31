@@ -34,6 +34,8 @@ import kotlin.time.ExperimentalTime
 import kotlin.uuid.ExperimentalUuidApi
 import kotlin.uuid.Uuid
 import kotlinx.coroutines.launch
+import kotlinx.datetime.TimeZone
+import kotlinx.datetime.toLocalDateTime
 import kotlinx.io.Buffer
 import kotlinx.io.write
 
@@ -86,7 +88,25 @@ fun EntryDetailScreen(
 				.fillMaxSize(),
 			verticalArrangement = Arrangement.spacedBy(12.dp),
 		) {
-			Text("Recorded at: ${entry.recordedAt}")
+			val recordedAtFormatted =
+				kotlinx.datetime.Instant
+					.fromEpochMilliseconds(
+						entry.recordedAt.toEpochMilliseconds(),
+					).toLocalDateTime(TimeZone.currentSystemDefault())
+					.run {
+						buildString {
+							append(year)
+							append('-')
+							append(monthNumber.toString().padStart(2, '0'))
+							append('-')
+							append(dayOfMonth.toString().padStart(2, '0'))
+							append(' ')
+							append(hour.toString().padStart(2, '0'))
+							append(':')
+							append(minute.toString().padStart(2, '0'))
+						}
+					}
+			Text("Recorded at: $recordedAtFormatted")
 			Text(entry.transcriptionText ?: entry.transcriptionStatus.displayName())
 			audio?.let { data ->
 				TextButton(
