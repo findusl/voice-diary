@@ -137,7 +137,13 @@ fun EntryDetailScreen(
 								scope.launch {
 									runCatching {
 										val buffer = Buffer().apply { write(data) }
-										val text = transcriber!!.transcribe(buffer)
+										val text =
+											transcriber?.transcribe(buffer)
+												?: run {
+													error =
+														"Transcriber unavailable"
+													return@launch
+												}
 										diaryClient.updateTranscription(
 											entry.id,
 											UpdateTranscriptionRequest(
