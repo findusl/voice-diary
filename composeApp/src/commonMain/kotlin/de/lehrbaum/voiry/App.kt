@@ -25,7 +25,8 @@ fun App(baseUrl: String = "http://localhost:8080", onRequestAudioPermission: (()
 		onDispose { diaryClient.close() }
 	}
 	MaterialTheme {
-		if (selectedEntryId == null) {
+		val entryId = selectedEntryId
+		if (entryId == null) {
 			MainScreen(
 				diaryClient = diaryClient,
 				onRequestAudioPermission = onRequestAudioPermission,
@@ -34,7 +35,7 @@ fun App(baseUrl: String = "http://localhost:8080", onRequestAudioPermission: (()
 		} else {
 			EntryDetailScreen(
 				diaryClient = diaryClient,
-				entryId = selectedEntryId!!,
+				entryId = entryId,
 				onBack = { selectedEntryId = null },
 			)
 		}
