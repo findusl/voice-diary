@@ -154,6 +154,45 @@ class EntryDetailScreenTest {
 		}
 
 	@Test
+	fun delete_failure_shows_error_and_does_not_navigate_back() =
+		runComposeUiTest {
+			val entry = VoiceDiaryEntry(
+				id = Uuid.random(),
+				title = "Recording 1",
+				recordedAt = Clock.System.now(),
+				duration = Duration.ZERO,
+				transcriptionText = "Transcript 1",
+				transcriptionStatus = TranscriptionStatus.DONE,
+			)
+			val client = EntryFakeDiaryClient(entry, failDeletion = true)
+			val player = mock<Player>(mode = MockMode.autoUnit)
+			every { player.isAvailable } returns true
+			var backCalled = false
+
+			setContent {
+				CompositionLocalProvider(LocalLifecycleOwner provides EntryFakeLifecycleOwner()) {
+					MaterialTheme {
+						EntryDetailScreen(
+							diaryClient = client,
+							entryId = entry.id,
+							onBack = { backCalled = true },
+							player = player,
+							transcriber = null,
+						)
+					}
+				}
+			}
+
+			waitForIdle()
+
+			onNodeWithText("Delete", substring = false).performClick()
+			waitForIdle()
+			assert(!backCalled)
+			onNodeWithText("Error: fail delete", substring = false).assertIsDisplayed()
+			assert(client.entries.value.isNotEmpty())
+		}
+
+	@Test
 	fun displays_placeholder_when_no_transcription() =
 		runComposeUiTest {
 			val entry = VoiceDiaryEntry(
@@ -192,6 +231,7 @@ class EntryDetailScreenTest {
 private class EntryFakeDiaryClient(
 	entry: VoiceDiaryEntry,
 	private val audio: ByteArray = byteArrayOf(0),
+	private val failDeletion: Boolean = false,
 ) : DiaryClient(baseUrl = "", httpClient = HttpClient()) {
 	private val _entries = MutableStateFlow(listOf(entry))
 	override val entries: MutableStateFlow<List<VoiceDiaryEntry>> get() = _entries
@@ -199,6 +239,9 @@ private class EntryFakeDiaryClient(
 	override suspend fun createEntry(entry: VoiceDiaryEntry, audio: ByteArray): VoiceDiaryEntry = entry
 
 	override suspend fun deleteEntry(id: Uuid) {
+		if (failDeletion) {
+			throw IllegalStateException("fail delete")
+		}
 		_entries.value = _entries.value.filterNot { it.id == id }
 	}
 
