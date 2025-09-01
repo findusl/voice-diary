@@ -10,6 +10,7 @@ import androidx.compose.runtime.setValue
 import de.lehrbaum.voiry.api.v1.DiaryClient
 import de.lehrbaum.voiry.ui.EntryDetailScreen
 import de.lehrbaum.voiry.ui.MainScreen
+import de.lehrbaum.voiry.ui.UiVoiceDiaryEntry
 import kotlin.time.ExperimentalTime
 import kotlin.uuid.ExperimentalUuidApi
 import kotlin.uuid.Uuid
@@ -24,19 +25,25 @@ fun App(baseUrl: String = "http://localhost:8080", onRequestAudioPermission: (()
 	DisposableEffect(diaryClient) {
 		onDispose { diaryClient.close() }
 	}
+	val onEntryClick: (UiVoiceDiaryEntry) -> Unit = remember {
+		{ entry -> selectedEntryId = entry.id }
+	}
+	val onBack: () -> Unit = remember {
+		{ selectedEntryId = null }
+	}
 	MaterialTheme {
 		val entryId = selectedEntryId
 		if (entryId == null) {
 			MainScreen(
 				diaryClient = diaryClient,
 				onRequestAudioPermission = onRequestAudioPermission,
-				onEntryClick = { entry -> selectedEntryId = entry.id },
+				onEntryClick = onEntryClick,
 			)
 		} else {
 			EntryDetailScreen(
 				diaryClient = diaryClient,
 				entryId = entryId,
-				onBack = { selectedEntryId = null },
+				onBack = onBack,
 			)
 		}
 	}
