@@ -39,7 +39,7 @@ class MainViewModel(
 	init {
 		viewModelScope.launch {
 			diaryClient.entries.collect { entries ->
-				_uiState.update { it.copy(entries = entries) }
+				_uiState.update { it.copy(entries = entries.map { it.toUi() }) }
 			}
 		}
 		viewModelScope.launch {
@@ -113,14 +113,14 @@ class MainViewModel(
 		}
 	}
 
-	fun deleteEntry(entry: VoiceDiaryEntry) {
+	fun deleteEntry(entry: UiVoiceDiaryEntry) {
 		viewModelScope.launch {
 			runCatching { diaryClient.deleteEntry(entry.id) }
 				.onFailure { e -> _uiState.update { it.copy(error = e.message) } }
 		}
 	}
 
-	fun transcribe(entry: VoiceDiaryEntry) {
+	fun transcribe(entry: UiVoiceDiaryEntry) {
 		val transcriber = transcriber ?: return
 		viewModelScope.launch {
 			runCatching {
@@ -154,7 +154,7 @@ class MainViewModel(
 
 @OptIn(ExperimentalUuidApi::class)
 data class MainUiState(
-	val entries: List<VoiceDiaryEntry> = emptyList(),
+	val entries: List<UiVoiceDiaryEntry> = emptyList(),
 	val isRecording: Boolean = false,
 	val pendingRecording: Recording? = null,
 	val pendingTitle: String = "",
