@@ -15,3 +15,13 @@ This is a Kotlin Multiplatform project targeting Android, Desktop (JVM), Server.
   The most important subfolder is [commonMain](./shared/src/commonMain/kotlin). If preferred, you can add code to the platform-specific folders here too.
 
 Learn more about [Kotlin Multiplatform](https://www.jetbrains.com/help/kotlin-multiplatform-dev/get-started.html)…
+
+## Running the server with Docker
+
+Build and run the server in a container using Docker Compose:
+
+```bash
+docker compose up -d
+```
+
+The container stores its SQLite database and uploaded audio files in the `data/` directory at the root of the repository, mounted at `/data` inside the container.
