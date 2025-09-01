@@ -5,6 +5,7 @@ package de.lehrbaum.voiry
 import de.lehrbaum.voiry.api.v1.DiaryEvent
 import de.lehrbaum.voiry.api.v1.TranscriptionStatus
 import de.lehrbaum.voiry.api.v1.VoiceDiaryEntry
+import io.github.aakira.napier.Napier
 import java.util.concurrent.ConcurrentHashMap
 import kotlin.time.ExperimentalTime
 import kotlin.time.Instant
@@ -37,17 +38,26 @@ class DiaryServiceImpl private constructor(
 
 	override suspend fun addEntry(entry: VoiceDiaryEntry, audio: ByteArray) {
 		mutex.withLock {
-			entries[entry.id] = entry
-			repository.add(entry, audio)
-			events.emit(DiaryEvent.EntryCreated(entry))
+			try {
+				repository.add(entry, audio)
+				entries[entry.id] = entry
+				events.emit(DiaryEvent.EntryCreated(entry))
+			} catch (e: Exception) {
+				Napier.e("Failed to add entry ${entry.id}", e)
+			}
 		}
 	}
 
 	override suspend fun deleteEntry(id: Uuid) {
 		mutex.withLock {
-			if (entries.remove(id) != null) {
-				repository.delete(id)
-				events.emit(DiaryEvent.EntryDeleted(id))
+			if (entries.containsKey(id)) {
+				try {
+					repository.delete(id)
+					entries.remove(id)
+					events.emit(DiaryEvent.EntryDeleted(id))
+				} catch (e: Exception) {
+					Napier.e("Failed to delete entry $id", e)
+				}
 			}
 		}
 	}
@@ -65,21 +75,25 @@ class DiaryServiceImpl private constructor(
 				transcriptionStatus = transcriptionStatus,
 				transcriptionUpdatedAt = transcriptionUpdatedAt,
 			)
-			entries[id] = updated
-			repository.updateTranscription(
-				id,
-				transcriptionText,
-				transcriptionStatus,
-				transcriptionUpdatedAt,
-			)
-			events.emit(
-				DiaryEvent.TranscriptionUpdated(
+			try {
+				repository.updateTranscription(
 					id,
 					transcriptionText,
 					transcriptionStatus,
 					transcriptionUpdatedAt,
-				),
-			)
+				)
+				entries[id] = updated
+				events.emit(
+					DiaryEvent.TranscriptionUpdated(
+						id,
+						transcriptionText,
+						transcriptionStatus,
+						transcriptionUpdatedAt,
+					),
+				)
+			} catch (e: Exception) {
+				Napier.e("Failed to update transcription for $id", e)
+			}
 		}
 	}
 
