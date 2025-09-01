@@ -12,6 +12,7 @@ import de.lehrbaum.voiry.audio.Transcriber
 import de.lehrbaum.voiry.audio.isWhisperAvailable
 import de.lehrbaum.voiry.audio.platformRecorder
 import de.lehrbaum.voiry.audio.platformTranscriber
+import io.github.aakira.napier.Napier
 import java.io.Closeable
 import kotlin.time.Clock
 import kotlin.time.Duration
@@ -54,6 +55,7 @@ class MainViewModel(
 
 	override fun close() {
 		runCatching { recorder.close() }
+			.onFailure { Napier.e("Recorder close failed", it) }
 	}
 
 	fun startRecording() {
