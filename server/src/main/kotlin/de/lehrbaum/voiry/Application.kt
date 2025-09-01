@@ -71,6 +71,7 @@ fun Application.module(service: DiaryService = runBlocking { DiaryServiceImpl.cr
 						}
 						else -> {}
 					}
+					part.dispose()
 				}
 				if (metadata == null || audio == null) {
 					call.respond(HttpStatusCode.BadRequest)
