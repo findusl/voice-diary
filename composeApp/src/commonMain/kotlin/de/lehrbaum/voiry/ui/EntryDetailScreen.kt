@@ -164,7 +164,8 @@ fun EntryDetailScreen(
 					onClick = {
 						scope.launch {
 							runCatching { diaryClient.deleteEntry(entry.id) }
-							onBack()
+								.onSuccess { onBack() }
+								.onFailure { e -> error = e.message }
 						}
 					},
 				) {
