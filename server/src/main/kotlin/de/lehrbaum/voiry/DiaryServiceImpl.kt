@@ -5,7 +5,6 @@ package de.lehrbaum.voiry
 import de.lehrbaum.voiry.api.v1.DiaryEvent
 import de.lehrbaum.voiry.api.v1.TranscriptionStatus
 import de.lehrbaum.voiry.api.v1.VoiceDiaryEntry
-import io.github.aakira.napier.Napier
 import java.util.concurrent.ConcurrentHashMap
 import kotlin.time.ExperimentalTime
 import kotlin.time.Instant
@@ -38,26 +37,18 @@ class DiaryServiceImpl private constructor(
 
 	override suspend fun addEntry(entry: VoiceDiaryEntry, audio: ByteArray) {
 		mutex.withLock {
-			try {
-				repository.add(entry, audio)
-				entries[entry.id] = entry
-				events.emit(DiaryEvent.EntryCreated(entry))
-			} catch (e: Exception) {
-				Napier.e("Failed to add entry ${entry.id}", e)
-			}
+			repository.add(entry, audio)
+			entries[entry.id] = entry
+			events.emit(DiaryEvent.EntryCreated(entry))
 		}
 	}
 
 	override suspend fun deleteEntry(id: Uuid) {
 		mutex.withLock {
 			if (entries.containsKey(id)) {
-				try {
-					repository.delete(id)
-					entries.remove(id)
-					events.emit(DiaryEvent.EntryDeleted(id))
-				} catch (e: Exception) {
-					Napier.e("Failed to delete entry $id", e)
-				}
+				repository.delete(id)
+				entries.remove(id)
+				events.emit(DiaryEvent.EntryDeleted(id))
 			}
 		}
 	}
@@ -75,25 +66,21 @@ class DiaryServiceImpl private constructor(
 				transcriptionStatus = transcriptionStatus,
 				transcriptionUpdatedAt = transcriptionUpdatedAt,
 			)
-			try {
-				repository.updateTranscription(
+			repository.updateTranscription(
+				id,
+				transcriptionText,
+				transcriptionStatus,
+				transcriptionUpdatedAt,
+			)
+			entries[id] = updated
+			events.emit(
+				DiaryEvent.TranscriptionUpdated(
 					id,
 					transcriptionText,
 					transcriptionStatus,
 					transcriptionUpdatedAt,
-				)
-				entries[id] = updated
-				events.emit(
-					DiaryEvent.TranscriptionUpdated(
-						id,
-						transcriptionText,
-						transcriptionStatus,
-						transcriptionUpdatedAt,
-					),
-				)
-			} catch (e: Exception) {
-				Napier.e("Failed to update transcription for $id", e)
-			}
+				),
+			)
 		}
 	}
 
