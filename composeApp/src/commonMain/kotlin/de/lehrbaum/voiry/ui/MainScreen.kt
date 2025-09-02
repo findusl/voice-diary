@@ -137,6 +137,7 @@ fun MainScreen(
 	}
 }
 
+@OptIn(ExperimentalUuidApi::class)
 @Composable
 private fun EntryRow(
 	entry: UiVoiceDiaryEntry,
@@ -144,6 +145,10 @@ private fun EntryRow(
 	onTranscribe: ((UiVoiceDiaryEntry) -> Unit)? = null,
 	onClick: () -> Unit,
 ) {
+	val onDeleteClick = remember(entry.id, onDelete) { { onDelete(entry) } }
+	val onTranscribeClick = remember(entry.id, onTranscribe) {
+		onTranscribe?.let { { it(entry) } }
+	}
 	ListItem(
 		modifier = Modifier.fillMaxWidth().clickable { onClick() },
 		headlineContent = { Text(entry.title) },
@@ -152,10 +157,10 @@ private fun EntryRow(
 		},
 		trailingContent = {
 			Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-				if (onTranscribe != null) {
-					TextButton(onClick = { onTranscribe(entry) }) { Text("Transcribe") }
+				if (onTranscribeClick != null) {
+					TextButton(onClick = onTranscribeClick) { Text("Transcribe") }
 				}
-				TextButton(onClick = { onDelete(entry) }) { Text("Delete") }
+				TextButton(onClick = onDeleteClick) { Text("Delete") }
 			}
 		},
 	)
