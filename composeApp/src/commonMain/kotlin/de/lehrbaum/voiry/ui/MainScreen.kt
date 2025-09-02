@@ -50,14 +50,20 @@ fun MainScreen(
 ) {
 	val viewModel = viewModel { MainViewModel(diaryClient, recorder, transcriber) }
 	val state by viewModel.uiState.collectAsStateWithLifecycle()
+	val recordClick = remember(viewModel) {
+		{
+			val isRecording = viewModel.uiState.value.isRecording
+			if (!isRecording) viewModel.startRecording() else viewModel.stopRecording()
+		}
+	}
 
 	Scaffold(
 		topBar = { TopAppBar(title = { Text("Voice Diary") }) },
 		floatingActionButton = {
 			if (state.recorderAvailable) {
-				ExtendedFloatingActionButton(onClick = {
-					if (!state.isRecording) viewModel.startRecording() else viewModel.stopRecording()
-				}) { Text(if (state.isRecording) "Stop" else "Record") }
+				ExtendedFloatingActionButton(onClick = recordClick) {
+					Text(if (state.isRecording) "Stop" else "Record")
+				}
 			}
 		},
 	) { padding ->
