@@ -27,7 +27,6 @@ import de.lehrbaum.voiry.api.v1.UpdateTranscriptionRequest
 import de.lehrbaum.voiry.audio.Player
 import de.lehrbaum.voiry.audio.Transcriber
 import de.lehrbaum.voiry.audio.platformPlayer
-import de.lehrbaum.voiry.audio.platformTranscriber
 import kotlin.time.Clock
 import kotlin.time.ExperimentalTime
 import kotlin.uuid.ExperimentalUuidApi
@@ -44,7 +43,7 @@ fun EntryDetailScreen(
 	entryId: Uuid,
 	onBack: () -> Unit,
 	player: Player = platformPlayer,
-	transcriber: Transcriber? = platformTranscriber,
+	transcriber: Transcriber?,
 ) {
 	val scope = rememberCoroutineScope()
 	val entryFlow = remember(entryId) { diaryClient.entryFlow(entryId) }

@@ -53,7 +53,12 @@ class MainScreenTest {
 					LocalViewModelStoreOwner provides FakeViewModelStoreOwner(),
 				) {
 					MaterialTheme {
-						MainScreen(diaryClient = client, recorder = unavailableRecorder, onEntryClick = { })
+						MainScreen(
+							diaryClient = client,
+							recorder = unavailableRecorder,
+							transcriber = null,
+							onEntryClick = { },
+						)
 					}
 				}
 			}
@@ -93,7 +98,12 @@ class MainScreenTest {
 					LocalViewModelStoreOwner provides FakeViewModelStoreOwner(),
 				) {
 					MaterialTheme {
-						MainScreen(diaryClient = client, recorder, onEntryClick = { })
+						MainScreen(
+							diaryClient = client,
+							recorder = recorder,
+							transcriber = null,
+							onEntryClick = { },
+						)
 					}
 				}
 			}
@@ -131,7 +141,12 @@ class MainScreenTest {
 					LocalViewModelStoreOwner provides FakeViewModelStoreOwner(),
 				) {
 					MaterialTheme {
-						MainScreen(diaryClient = client, recorder, onEntryClick = { })
+						MainScreen(
+							diaryClient = client,
+							recorder = recorder,
+							transcriber = null,
+							onEntryClick = { },
+						)
 					}
 				}
 			}
@@ -165,7 +180,12 @@ class MainScreenTest {
 					LocalViewModelStoreOwner provides FakeViewModelStoreOwner(),
 				) {
 					MaterialTheme {
-						MainScreen(diaryClient = client, recorder, onEntryClick = { })
+						MainScreen(
+							diaryClient = client,
+							recorder = recorder,
+							transcriber = null,
+							onEntryClick = { },
+						)
 					}
 				}
 			}

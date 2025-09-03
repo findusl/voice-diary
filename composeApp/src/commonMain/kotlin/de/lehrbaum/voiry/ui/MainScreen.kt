@@ -35,7 +35,6 @@ import de.lehrbaum.voiry.api.v1.DiaryClient
 import de.lehrbaum.voiry.audio.Recorder
 import de.lehrbaum.voiry.audio.Transcriber
 import de.lehrbaum.voiry.audio.platformRecorder
-import de.lehrbaum.voiry.audio.platformTranscriber
 import kotlin.time.ExperimentalTime
 import kotlin.uuid.ExperimentalUuidApi
 
@@ -45,7 +44,7 @@ fun MainScreen(
 	diaryClient: DiaryClient,
 	recorder: Recorder = platformRecorder,
 	onRequestAudioPermission: (() -> Unit)? = null,
-	transcriber: Transcriber? = platformTranscriber,
+	transcriber: Transcriber?,
 	onEntryClick: (UiVoiceDiaryEntry) -> Unit,
 ) {
 	val viewModel = viewModel { MainViewModel(diaryClient, recorder, transcriber) }
