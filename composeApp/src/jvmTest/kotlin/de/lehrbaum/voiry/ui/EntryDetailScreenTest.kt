@@ -4,8 +4,13 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.assertIsEnabled
+import androidx.compose.ui.test.assertIsNotEnabled
+import androidx.compose.ui.test.hasSetTextAction
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performTextClearance
+import androidx.compose.ui.test.performTextInput
 import androidx.compose.ui.test.runComposeUiTest
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleOwner
@@ -14,6 +19,7 @@ import androidx.lifecycle.compose.LocalLifecycleOwner
 import de.lehrbaum.voiry.UiTest
 import de.lehrbaum.voiry.api.v1.DiaryClient
 import de.lehrbaum.voiry.api.v1.TranscriptionStatus
+import de.lehrbaum.voiry.api.v1.UpdateTranscriptionRequest
 import de.lehrbaum.voiry.api.v1.VoiceDiaryEntry
 import de.lehrbaum.voiry.audio.ModelDownloader
 import de.lehrbaum.voiry.audio.Player
@@ -79,6 +85,52 @@ class EntryDetailScreenTest {
 			waitForIdle()
 			verify { player.stop() }
 			onNodeWithText("Play", substring = false).assertIsDisplayed()
+		}
+
+	@Test
+	fun editing_transcription_calls_client_and_updates_ui() =
+		runComposeUiTest {
+			val entry = VoiceDiaryEntry(
+				id = Uuid.random(),
+				title = "Recording 1",
+				recordedAt = Clock.System.now(),
+				duration = Duration.ZERO,
+				transcriptionText = "Transcript 1",
+				transcriptionStatus = TranscriptionStatus.DONE,
+			)
+			val client = EntryFakeDiaryClient(entry)
+			val player = mock<Player>(mode = MockMode.autoUnit)
+			every { player.isAvailable } returns true
+
+			setContent {
+				CompositionLocalProvider(LocalLifecycleOwner provides EntryFakeLifecycleOwner()) {
+					MaterialTheme {
+						EntryDetailScreen(
+							diaryClient = client,
+							entryId = entry.id,
+							onBack = {},
+							player = player,
+							transcriber = null,
+						)
+					}
+				}
+			}
+
+			waitForIdle()
+
+			onNodeWithText("Edit", substring = false).performClick()
+			waitForIdle()
+
+			onNodeWithText("Save", substring = false).assertIsNotEnabled()
+			onNode(hasSetTextAction()).performTextClearance()
+			onNodeWithText("Save", substring = false).assertIsNotEnabled()
+			onNode(hasSetTextAction()).performTextInput("Edited")
+			onNodeWithText("Save", substring = false).assertIsEnabled()
+			onNodeWithText("Save", substring = false).performClick()
+			waitForIdle()
+
+			onNodeWithText("Edited", substring = false).assertIsDisplayed()
+			assert(client.lastUpdateRequest?.transcriptionText == "Edited")
 		}
 
 	@Test
@@ -237,6 +289,7 @@ private class EntryFakeDiaryClient(
 ) : DiaryClient(baseUrl = "", httpClient = HttpClient()) {
 	private val _entries = MutableStateFlow(listOf(entry))
 	override val entries: MutableStateFlow<List<VoiceDiaryEntry>> get() = _entries
+	var lastUpdateRequest: UpdateTranscriptionRequest? = null
 
 	override suspend fun createEntry(entry: VoiceDiaryEntry, audio: ByteArray): VoiceDiaryEntry = entry
 
@@ -248,6 +301,20 @@ private class EntryFakeDiaryClient(
 	}
 
 	override suspend fun getAudio(id: Uuid): ByteArray = audio
+
+	override suspend fun updateTranscription(id: Uuid, request: UpdateTranscriptionRequest) {
+		lastUpdateRequest = request
+		_entries.value = _entries.value.map {
+			if (it.id == id) {
+				it.copy(
+					transcriptionText = request.transcriptionText,
+					transcriptionStatus = request.transcriptionStatus,
+				)
+			} else {
+				it
+			}
+		}
+	}
 }
 
 private class EntryFakeLifecycleOwner : LifecycleOwner {
