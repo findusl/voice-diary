@@ -5,7 +5,7 @@ android-minSdk = "24"
 android-targetSdk = "36"
 androidx-activity = "1.10.1"
 androidx-lifecycle = "2.9.3"
-composeHotReload = "1.0.0-beta05"
+composeHotReload = "1.0.0-beta06"
 composeMultiplatform = "1.8.2"
 junit = "4.13.2"
 kotlin = "2.2.10"
@@ -21,7 +21,7 @@ exposed = "0.61.0"
 sqlite = "3.50.3.0"
 appdirs = "2.0.0"
 lexilabs-basic = "+"
-kotlinx-datetime = "0.6.0"
+kotlinx-datetime = "0.7.1-0.6.x-compat"
 
 [libraries]
 kotlin-test = { module = "org.jetbrains.kotlin:kotlin-test", version.ref = "kotlin" }
