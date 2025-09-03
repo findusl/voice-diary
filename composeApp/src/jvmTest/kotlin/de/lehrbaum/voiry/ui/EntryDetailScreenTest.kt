@@ -15,6 +15,7 @@ import de.lehrbaum.voiry.UiTest
 import de.lehrbaum.voiry.api.v1.DiaryClient
 import de.lehrbaum.voiry.api.v1.TranscriptionStatus
 import de.lehrbaum.voiry.api.v1.VoiceDiaryEntry
+import de.lehrbaum.voiry.audio.ModelDownloader
 import de.lehrbaum.voiry.audio.Player
 import de.lehrbaum.voiry.audio.Transcriber
 import dev.mokkery.MockMode
@@ -29,6 +30,7 @@ import kotlin.time.ExperimentalTime
 import kotlin.uuid.ExperimentalUuidApi
 import kotlin.uuid.Uuid
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.io.Buffer
 import org.junit.Test
 import org.junit.experimental.categories.Category
 
@@ -82,6 +84,7 @@ class EntryDetailScreenTest {
 	@Test
 	fun transcribe_button_shows_transcribe_for_none_status() =
 		runComposeUiTest {
+			System.setProperty("voiceDiary.whisperAvailable", "true")
 			val entry = VoiceDiaryEntry(
 				id = Uuid.random(),
 				title = "Recording 1",
@@ -92,7 +95,7 @@ class EntryDetailScreenTest {
 			val audio = byteArrayOf(1)
 			val client = EntryFakeDiaryClient(entry, audio)
 			val player = mock<Player>(mode = MockMode.autoUnit)
-			val transcriber = mock<Transcriber>(mode = MockMode.autoUnit)
+			val transcriber = ReadyTranscriber()
 			every { player.isAvailable } returns true
 
 			setContent {
@@ -104,7 +107,6 @@ class EntryDetailScreenTest {
 							onBack = {},
 							player = player,
 							transcriber = transcriber,
-							isWhisperAvailable = { true },
 						)
 					}
 				}
@@ -253,4 +255,14 @@ private class EntryFakeLifecycleOwner : LifecycleOwner {
 		currentState = Lifecycle.State.RESUMED
 	}
 	override val lifecycle: Lifecycle get() = registry
+}
+
+private class ReadyTranscriber : Transcriber {
+	override val modelManager = object : ModelDownloader {
+		override val modelDownloadProgress = MutableStateFlow<Float?>(1f)
+	}
+
+	override suspend fun initialize() {}
+
+	override suspend fun transcribe(buffer: Buffer): String = ""
 }

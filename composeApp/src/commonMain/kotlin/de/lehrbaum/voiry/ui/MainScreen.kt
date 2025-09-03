@@ -93,7 +93,6 @@ fun MainScreen(
 
 				else -> {
 					val onDelete = remember(viewModel) { viewModel::deleteEntry }
-					val onTranscribe = remember(viewModel) { viewModel::transcribe }
 					LazyColumn(
 						modifier = Modifier.fillMaxSize(),
 						contentPadding = PaddingValues(vertical = 8.dp),
@@ -105,11 +104,8 @@ fun MainScreen(
 							EntryRow(
 								entry = entry,
 								onDelete = onDelete,
-								onTranscribe = if (state.canTranscribe) {
-									onTranscribe
-								} else {
-									null
-								},
+								transcriber = transcriber,
+								onTranscribe = { viewModel.transcribe(entry) },
 								onClick = onClick,
 							)
 						}
@@ -148,13 +144,12 @@ fun MainScreen(
 private fun EntryRow(
 	entry: UiVoiceDiaryEntry,
 	onDelete: (UiVoiceDiaryEntry) -> Unit,
-	onTranscribe: ((UiVoiceDiaryEntry) -> Unit)? = null,
+	transcriber: Transcriber?,
+	onTranscribe: (UiVoiceDiaryEntry) -> Unit,
 	onClick: () -> Unit,
 ) {
 	val onDeleteClick = remember(entry.id, onDelete) { { onDelete(entry) } }
-	val onTranscribeClick = remember(entry.id, onTranscribe) {
-		onTranscribe?.let { { it(entry) } }
-	}
+	val onTranscribeClick = remember(entry.id, onTranscribe) { { onTranscribe(entry) } }
 	ListItem(
 		modifier = Modifier.fillMaxWidth().clickable { onClick() },
 		headlineContent = { Text(entry.title) },
@@ -162,10 +157,11 @@ private fun EntryRow(
 			Text(entry.transcriptionText ?: entry.transcriptionStatus.displayName())
 		},
 		trailingContent = {
-			Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-				if (onTranscribeClick != null) {
-					TextButton(onClick = onTranscribeClick) { Text("Transcribe") }
-				}
+			Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+				TranscribeButtonWithProgress(
+					transcriber = transcriber,
+					onTranscribe = onTranscribeClick,
+				)
 				TextButton(onClick = onDeleteClick) { Text("Delete") }
 			}
 		},
