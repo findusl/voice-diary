@@ -2,6 +2,8 @@ package de.lehrbaum.voiry.ui
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -39,7 +41,7 @@ import kotlinx.datetime.TimeZone
 import kotlinx.datetime.toLocalDateTime
 import kotlinx.io.Buffer
 
-@OptIn(ExperimentalMaterial3Api::class, ExperimentalUuidApi::class, ExperimentalTime::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalUuidApi::class, ExperimentalTime::class, ExperimentalLayoutApi::class)
 @Composable
 fun EntryDetailScreen(
 	diaryClient: DiaryClient,
@@ -157,21 +159,25 @@ fun EntryDetailScreen(
 					},
 				) { Text("Edit") }
 			}
-			audio?.let { data ->
-				TextButton(
-					onClick = {
-						if (isPlaying) {
-							player.stop()
-						} else {
-							player.play(data)
-						}
-						isPlaying = !isPlaying
-					},
-				) {
-					Text(if (isPlaying) "Stop" else "Play")
+			FlowRow(
+				modifier = Modifier.fillMaxWidth(),
+				horizontalArrangement = Arrangement.spacedBy(8.dp),
+				verticalArrangement = Arrangement.spacedBy(8.dp),
+			) {
+				audio?.let { data ->
+					TextButton(
+						onClick = {
+							if (isPlaying) {
+								player.stop()
+							} else {
+								player.play(data)
+							}
+							isPlaying = !isPlaying
+						},
+					) {
+						Text(if (isPlaying) "Stop" else "Play")
+					}
 				}
-			}
-			Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
 				val latestAudio by rememberUpdatedState(audio)
 				val setError by rememberUpdatedState<(String?) -> Unit> { error = it }
 				val transcribeAction = remember(diaryClient, transcriber, entry.id, scope, setError) {
