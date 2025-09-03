@@ -31,12 +31,6 @@ buildkonfig {
 	}
 }
 
-ktlint {
-	filter {
-		exclude("**/buildkonfig/**")
-	}
-}
-
 kotlin {
 	androidTarget {
 		@OptIn(ExperimentalKotlinGradlePluginApi::class)
