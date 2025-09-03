@@ -48,6 +48,9 @@ fun Application.module(service: DiaryService = runBlocking { DiaryServiceImpl.cr
 	install(SSE)
 
 	routing {
+		get("/health") {
+			call.respond(HttpStatusCode.OK)
+		}
 		route("/v1") {
 			sse("/entries") {
 				val json = Json
