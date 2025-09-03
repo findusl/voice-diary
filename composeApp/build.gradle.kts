@@ -1,3 +1,5 @@
+import com.codingfeline.buildkonfig.compiler.FieldSpec.Type.STRING
+import java.util.Properties
 import org.gradle.api.tasks.testing.Test
 import org.jetbrains.compose.ExperimentalComposeLibrary
 import org.jetbrains.compose.desktop.application.dsl.TargetFormat
@@ -12,6 +14,27 @@ plugins {
 	alias(libs.plugins.composeHotReload)
 	alias(libs.plugins.kotlinSerialization)
 	alias(libs.plugins.mokkery)
+	alias(libs.plugins.buildkonfig)
+}
+
+val localProps = Properties().apply {
+	val f = rootProject.file("local.properties")
+	if (f.exists()) f.inputStream().use { load(it) }
+}
+val backendUrl = localProps.getProperty("backendUrl") ?: "http://localhost:8080"
+
+buildkonfig {
+	packageName = "de.lehrbaum.voiry"
+	exposeObjectWithName = "BuildKonfig"
+	defaultConfigs {
+		buildConfigField(STRING, "BACKEND_URL", backendUrl)
+	}
+}
+
+ktlint {
+	filter {
+		exclude("**/buildkonfig/**")
+	}
 }
 
 kotlin {
