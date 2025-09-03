@@ -3,11 +3,14 @@ package de.lehrbaum.voiry
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import de.lehrbaum.voiry.api.v1.DiaryClient
+import de.lehrbaum.voiry.audio.Transcriber
+import de.lehrbaum.voiry.audio.platformTranscriber
 import de.lehrbaum.voiry.ui.EntryDetailScreen
 import de.lehrbaum.voiry.ui.MainScreen
 import de.lehrbaum.voiry.ui.UiVoiceDiaryEntry
@@ -21,6 +24,8 @@ import org.jetbrains.compose.ui.tooling.preview.Preview
 @Preview
 fun App(baseUrl: String = "http://localhost:8080", onRequestAudioPermission: (() -> Unit)? = null) {
 	val diaryClient = remember { DiaryClient(baseUrl) }
+	val transcriber: Transcriber? = remember { platformTranscriber }
+	LaunchedEffect(transcriber) { transcriber?.initialize() }
 	var selectedEntryId by remember { mutableStateOf<Uuid?>(null) }
 	DisposableEffect(diaryClient) {
 		onDispose { diaryClient.close() }
@@ -37,6 +42,7 @@ fun App(baseUrl: String = "http://localhost:8080", onRequestAudioPermission: (()
 			MainScreen(
 				diaryClient = diaryClient,
 				onRequestAudioPermission = onRequestAudioPermission,
+				transcriber = transcriber,
 				onEntryClick = onEntryClick,
 			)
 		} else {
@@ -44,6 +50,7 @@ fun App(baseUrl: String = "http://localhost:8080", onRequestAudioPermission: (()
 				diaryClient = diaryClient,
 				entryId = entryId,
 				onBack = onBack,
+				transcriber = transcriber,
 			)
 		}
 	}
