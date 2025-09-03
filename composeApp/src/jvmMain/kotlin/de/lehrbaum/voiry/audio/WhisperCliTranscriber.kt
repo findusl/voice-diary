@@ -14,11 +14,15 @@ private const val TAG = "WhisperCliTranscriber"
 
 /** Desktop transcriber backed by the `whisper-cli` executable. */
 class WhisperCliTranscriber(
-	private val modelPath: String = "whisper-models/ggml-large-v3-turbo.bin",
+	override val modelManager: WhisperModelManager = WhisperModelManager(),
 	private val processRunner: (List<String>) -> Int = { command ->
 		ProcessBuilder(command).start().waitFor()
 	},
 ) : Transcriber {
+	override suspend fun initialize() {
+		modelManager.initialize()
+	}
+
 	override suspend fun transcribe(buffer: Buffer): String =
 		withContext(Dispatchers.IO) {
 			val tmp = createTempFile(prefix = "voice-diary", suffix = ".wav").toFile()
@@ -29,7 +33,7 @@ class WhisperCliTranscriber(
 				val command = listOf(
 					"whisper-cli",
 					"--model",
-					modelPath,
+					modelManager.modelPath.toString(),
 					"--file",
 					tmp.absolutePath,
 					"--output-json",

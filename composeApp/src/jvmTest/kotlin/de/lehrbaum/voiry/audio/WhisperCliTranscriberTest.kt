@@ -1,6 +1,7 @@
 package de.lehrbaum.voiry.audio
 
 import java.io.File
+import java.nio.file.Files
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
@@ -23,7 +24,10 @@ class WhisperCliTranscriberTest {
 				)
 				0
 			}
-			val transcriber = WhisperCliTranscriber(processRunner = runner)
+			val model = Files.createTempFile("model", ".bin")
+			val manager = WhisperModelManager(model, model.toUri().toURL())
+			val transcriber = WhisperCliTranscriber(modelManager = manager, processRunner = runner)
+			transcriber.initialize()
 			val buffer = Buffer().apply { writeString("dummy") }
 			val transcript = transcriber.transcribe(buffer)
 			assertEquals("Hello World", transcript)

@@ -43,8 +43,9 @@ class MainViewModel(
 			}
 		}
 		viewModelScope.launch {
-			val available = transcriber != null && isWhisperAvailable()
-			_uiState.update { it.copy(canTranscribe = available) }
+			if (transcriber != null && isWhisperAvailable()) {
+				transcriber.initialize()
+			}
 		}
 	}
 
@@ -159,7 +160,6 @@ data class MainUiState(
 	val pendingRecording: Recording? = null,
 	val pendingTitle: String = "",
 	val error: String? = null,
-	val canTranscribe: Boolean = false,
 	val recorderAvailable: Boolean = true,
 )
 
