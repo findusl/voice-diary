@@ -71,8 +71,12 @@ fun MainScreen(
 				.padding(padding)
 				.fillMaxSize(),
 		) {
-			if (!state.recorderAvailable) {
-				InfoBanner("Audio recorder not available on this platform/device.")
+			if (!state.recorderAvailable && !state.recorderUnavailableDismissed) {
+				InfoBanner(
+					text = "Audio recorder not available on this platform/device.",
+					actionLabel = "Dismiss",
+					onAction = { viewModel.dismissRecorderUnavailable() },
+				)
 			}
 			if (state.error != null) {
 				val permissionRelated =

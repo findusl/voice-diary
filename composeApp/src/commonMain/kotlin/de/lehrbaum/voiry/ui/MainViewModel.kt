@@ -82,6 +82,10 @@ class MainViewModel(
 		}
 	}
 
+	fun dismissRecorderUnavailable() {
+		_uiState.update { it.copy(recorderUnavailableDismissed = true) }
+	}
+
 	fun updatePendingTitle(title: String) {
 		_uiState.update { it.copy(pendingTitle = title) }
 	}
@@ -154,6 +158,7 @@ data class MainUiState(
 	val pendingTitle: String = "",
 	val error: String? = null,
 	val recorderAvailable: Boolean = true,
+	val recorderUnavailableDismissed: Boolean = false,
 )
 
 @Stable
