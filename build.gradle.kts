@@ -18,6 +18,7 @@ allprojects {
 	ktlint {
 		filter {
 			exclude("**/generated/**")
+			exclude("**/BuildKonfig.kt")
 		}
 	}
 }
@@ -33,5 +34,6 @@ tasks.register("checkAgentsEnvironment") {
 		":shared:testDebugUnitTest",
 		":shared:testReleaseUnitTest",
 		":server:test",
+		"ktlintCheck",
 	)
 }
