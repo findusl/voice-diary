@@ -14,9 +14,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
@@ -26,7 +26,6 @@ import de.lehrbaum.voiry.api.v1.TranscriptionStatus
 import de.lehrbaum.voiry.api.v1.UpdateTranscriptionRequest
 import de.lehrbaum.voiry.audio.Player
 import de.lehrbaum.voiry.audio.Transcriber
-import de.lehrbaum.voiry.audio.isWhisperAvailable
 import de.lehrbaum.voiry.audio.platformPlayer
 import de.lehrbaum.voiry.audio.platformTranscriber
 import kotlin.time.Clock
@@ -37,7 +36,6 @@ import kotlinx.coroutines.launch
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.toLocalDateTime
 import kotlinx.io.Buffer
-import kotlinx.io.write
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalUuidApi::class, ExperimentalTime::class)
 @Composable
@@ -47,7 +45,6 @@ fun EntryDetailScreen(
 	onBack: () -> Unit,
 	player: Player = platformPlayer,
 	transcriber: Transcriber? = platformTranscriber,
-	isWhisperAvailable: suspend () -> Boolean = ::isWhisperAvailable,
 ) {
 	val scope = rememberCoroutineScope()
 	val entryFlow = remember(entryId) { diaryClient.entryFlow(entryId) }
@@ -55,9 +52,6 @@ fun EntryDetailScreen(
 	var audio by remember { mutableStateOf<ByteArray?>(null) }
 	var isPlaying by remember { mutableStateOf(false) }
 	var error by remember { mutableStateOf<String?>(null) }
-	val canTranscribe by produceState(initialValue = false, transcriber, isWhisperAvailable) {
-		value = transcriber != null && isWhisperAvailable()
-	}
 
 	androidx.compose.runtime.LaunchedEffect(entryId) {
 		runCatching { diaryClient.getAudio(entryId) }
@@ -123,43 +117,28 @@ fun EntryDetailScreen(
 				}
 			}
 			Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-				if (canTranscribe) {
-					val transcribeLabel =
-						when (entry.transcriptionStatus) {
-							TranscriptionStatus.NONE,
-							TranscriptionStatus.FAILED,
-							-> "Transcribe"
-							else -> "Re-transcribe"
+				val latestAudio by rememberUpdatedState(audio)
+				val setError by rememberUpdatedState<(String?) -> Unit> { error = it }
+				val transcribeAction = remember(diaryClient, transcriber, entry.id, scope, setError) {
+					{
+						val audioData = latestAudio
+						val t = transcriber
+						if (audioData != null && t != null) {
+							scope.launch {
+								transcribeEntry(
+									diaryClient,
+									t,
+									entry.id,
+									audioData,
+								).onFailure { e -> setError(e.message) }
+							}
+						} else if (t == null) {
+							setError("Transcriber unavailable")
 						}
-					audio?.let { data ->
-						TextButton(
-							onClick = {
-								scope.launch {
-									runCatching {
-										val buffer = Buffer().apply { write(data) }
-										val text =
-											transcriber?.transcribe(buffer)
-												?: run {
-													error =
-														"Transcriber unavailable"
-													return@launch
-												}
-										diaryClient.updateTranscription(
-											entry.id,
-											UpdateTranscriptionRequest(
-												text,
-												TranscriptionStatus.DONE,
-												Clock.System.now(),
-											),
-										)
-									}.onFailure { e -> error = e.message }
-								}
-							},
-						) {
-							Text(transcribeLabel)
-						}
+						Unit
 					}
 				}
+				TranscribeButtonWithProgress(transcriber = transcriber, onTranscribe = transcribeAction)
 				TextButton(
 					onClick = {
 						scope.launch {
@@ -178,3 +157,23 @@ fun EntryDetailScreen(
 		}
 	}
 }
+
+@OptIn(ExperimentalTime::class, ExperimentalUuidApi::class)
+private suspend fun transcribeEntry(
+	diaryClient: DiaryClient,
+	transcriber: Transcriber,
+	entryId: Uuid,
+	audio: ByteArray,
+): Result<Unit> =
+	runCatching {
+		val buffer = Buffer().apply { write(audio) }
+		val text = transcriber.transcribe(buffer)
+		diaryClient.updateTranscription(
+			entryId,
+			UpdateTranscriptionRequest(
+				text,
+				TranscriptionStatus.DONE,
+				Clock.System.now(),
+			),
+		)
+	}
