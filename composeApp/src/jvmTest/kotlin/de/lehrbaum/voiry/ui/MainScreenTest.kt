@@ -78,8 +78,11 @@ class MainScreenTest {
 
 			// FAB should be hidden when recorder is not available
 			onAllNodesWithText("Record", substring = false).assertCountEquals(0)
-			// Info banner is shown
+			// Info banner can be dismissed
 			onNodeWithText("Audio recorder not available on this platform/device.", substring = false).assertIsDisplayed()
+			onNodeWithText("Dismiss", substring = false).performClick()
+			waitForIdle()
+			onAllNodesWithText("Audio recorder not available on this platform/device.", substring = false).assertCountEquals(0)
 		}
 
 	@Test
