@@ -9,9 +9,7 @@ import de.lehrbaum.voiry.api.v1.UpdateTranscriptionRequest
 import de.lehrbaum.voiry.api.v1.VoiceDiaryEntry
 import de.lehrbaum.voiry.audio.Recorder
 import de.lehrbaum.voiry.audio.Transcriber
-import de.lehrbaum.voiry.audio.isWhisperAvailable
 import de.lehrbaum.voiry.audio.platformRecorder
-import de.lehrbaum.voiry.audio.platformTranscriber
 import io.github.aakira.napier.Napier
 import java.io.Closeable
 import kotlin.time.Clock
@@ -31,7 +29,7 @@ import kotlinx.io.readByteArray
 class MainViewModel(
 	private val diaryClient: DiaryClient,
 	private val recorder: Recorder = platformRecorder,
-	private val transcriber: Transcriber? = platformTranscriber,
+	private val transcriber: Transcriber?,
 ) : ViewModel(), Closeable {
 	private val _uiState = MutableStateFlow(MainUiState(recorderAvailable = recorder.isAvailable))
 	val uiState: StateFlow<MainUiState> = _uiState.asStateFlow()
@@ -40,11 +38,6 @@ class MainViewModel(
 		viewModelScope.launch {
 			diaryClient.entries.collect { entries ->
 				_uiState.update { it.copy(entries = entries.map { it.toUi() }) }
-			}
-		}
-		viewModelScope.launch {
-			if (transcriber != null && isWhisperAvailable()) {
-				transcriber.initialize()
 			}
 		}
 	}
