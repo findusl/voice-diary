@@ -8,6 +8,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import de.lehrbaum.voiry.BuildKonfig
 import de.lehrbaum.voiry.api.v1.DiaryClient
 import de.lehrbaum.voiry.audio.Transcriber
 import de.lehrbaum.voiry.audio.platformTranscriber
@@ -22,7 +23,7 @@ import org.jetbrains.compose.ui.tooling.preview.Preview
 @OptIn(ExperimentalUuidApi::class, ExperimentalTime::class)
 @Composable
 @Preview
-fun App(baseUrl: String = "http://localhost:8080", onRequestAudioPermission: (() -> Unit)? = null) {
+fun App(baseUrl: String = BuildKonfig.BACKEND_URL, onRequestAudioPermission: (() -> Unit)? = null) {
 	val diaryClient = remember { DiaryClient(baseUrl) }
 	val transcriber: Transcriber? = remember { platformTranscriber }
 	LaunchedEffect(transcriber) { transcriber?.initialize() }
