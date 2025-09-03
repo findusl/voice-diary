@@ -9,7 +9,6 @@ import javax.sound.sampled.AudioFileFormat
 import javax.sound.sampled.AudioFormat
 import javax.sound.sampled.AudioInputStream
 import javax.sound.sampled.AudioSystem
-import javax.sound.sampled.DataLine
 import javax.sound.sampled.TargetDataLine
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
@@ -17,47 +16,23 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.io.Buffer
 import kotlinx.io.asOutputStream
 
-private const val TAG = "AudioRecorder"
-
-class AudioRecorder : AutoCloseable, CoroutineScope, Recorder {
+abstract class BaseAudioRecorder : AutoCloseable, CoroutineScope, Recorder {
 	override val coroutineContext: Job = SupervisorJob()
-	private lateinit var line: TargetDataLine
-	private lateinit var format: AudioFormat
+	protected lateinit var line: TargetDataLine
+	protected lateinit var format: AudioFormat
+	private var recordingStream: ByteArrayOutputStream? = null
+	private var isRecording = false
 	private var _isAvailable = false
 	override val isAvailable: Boolean
 		get() = _isAvailable
-	private var recordingStream: ByteArrayOutputStream? = null
-	private var isRecording = false
+	protected open val tag = "AudioRecorder"
 
 	init {
-		determineLineAndFormat()
+		_isAvailable = initializeLineAndFormat()
 	}
 
-	private fun determineLineAndFormat() {
-		val mixerInfos = AudioSystem.getMixerInfo()
+	protected abstract fun initializeLineAndFormat(): Boolean
 
-		for (mixerInfo in mixerInfos) {
-			val mixer = AudioSystem.getMixer(mixerInfo)
-			val lineInfos = mixer.targetLineInfo
-
-			for (lineInfo in lineInfos) {
-				if (lineInfo is DataLine.Info) {
-					val line = mixer.getLine(lineInfo) as? TargetDataLine
-					val formats = lineInfo.formats
-
-					val format = formats.firstOrNull { it.sampleRate.toInt() != AudioSystem.NOT_SPECIFIED }
-					if (line != null && format != null) {
-						this.line = line
-						this.format = format
-						_isAvailable = true
-						return
-					}
-				}
-			}
-		}
-	}
-
-	// Start recording audio
 	override fun startRecording() {
 		isRecording = true
 		if (!line.isOpen) {
@@ -77,14 +52,13 @@ class AudioRecorder : AutoCloseable, CoroutineScope, Recorder {
 					}
 				}
 			} catch (e: IOException) {
-				Napier.w("Exception while recording audio", e, tag = TAG)
+				Napier.w("Exception while recording audio", e, tag = tag)
 			} finally {
 				line.close()
 			}
 		}.start()
 	}
 
-	// Stop recording and return the audio data
 	override fun stopRecording(): Result<Buffer> {
 		if (!isRecording) return Result.failure(IllegalStateException("AudioRecorder is not recording"))
 		isRecording = false
