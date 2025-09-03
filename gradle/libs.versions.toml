@@ -22,6 +22,7 @@ sqlite = "3.50.3.0"
 appdirs = "2.0.0"
 lexilabs-basic = "+"
 kotlinx-datetime = "0.7.1-0.6.x-compat"
+buildkonfig = "0.17.1"
 
 [libraries]
 kotlin-test = { module = "org.jetbrains.kotlin:kotlin-test", version.ref = "kotlin" }
@@ -65,3 +66,4 @@ kotlinMultiplatform = { id = "org.jetbrains.kotlin.multiplatform", version.ref =
 ktlint = { id = "org.jlleitschuh.gradle.ktlint", version.ref = "ktlint" }
 mokkery = { id = "dev.mokkery", version.ref = "mokkery" }
 kotlinSerialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlin" }
+buildkonfig = { id = "com.codingfeline.buildkonfig", version.ref = "buildkonfig" }
