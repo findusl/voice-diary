@@ -4,8 +4,11 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -52,6 +55,9 @@ fun EntryDetailScreen(
 	var audio by remember { mutableStateOf<ByteArray?>(null) }
 	var isPlaying by remember { mutableStateOf(false) }
 	var error by remember { mutableStateOf<String?>(null) }
+	var isEditing by remember { mutableStateOf(false) }
+	var editedText by remember { mutableStateOf(entry.transcriptionText ?: "") }
+	var isSaving by remember { mutableStateOf(false) }
 
 	androidx.compose.runtime.LaunchedEffect(entryId) {
 		runCatching { diaryClient.getAudio(entryId) }
@@ -101,7 +107,57 @@ fun EntryDetailScreen(
 						}
 					}
 			Text("Recorded at: $recordedAtFormatted")
-			Text(entry.transcriptionText ?: entry.transcriptionStatus.displayName())
+			if (isEditing) {
+				OutlinedTextField(
+					value = editedText,
+					onValueChange = { editedText = it },
+					modifier = Modifier.fillMaxWidth(),
+				)
+				Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+					TextButton(
+						enabled = !isSaving,
+						onClick = {
+							isEditing = false
+							editedText = entry.transcriptionText ?: ""
+						},
+					) { Text("Cancel") }
+					TextButton(
+						enabled =
+							!isSaving &&
+								editedText.isNotBlank() &&
+								editedText != (entry.transcriptionText ?: ""),
+						onClick = {
+							scope.launch {
+								isSaving = true
+								runCatching {
+									diaryClient.updateTranscription(
+										entry.id,
+										UpdateTranscriptionRequest(
+											editedText,
+											TranscriptionStatus.DONE,
+											Clock.System.now(),
+										),
+									)
+								}.onSuccess {
+									isEditing = false
+								}.onFailure { e -> error = e.message }
+								isSaving = false
+							}
+						},
+					) { Text("Save") }
+				}
+				if (isSaving) {
+					CircularProgressIndicator()
+				}
+			} else {
+				Text(entry.transcriptionText ?: entry.transcriptionStatus.displayName())
+				TextButton(
+					onClick = {
+						editedText = entry.transcriptionText ?: ""
+						isEditing = true
+					},
+				) { Text("Edit") }
+			}
 			audio?.let { data ->
 				TextButton(
 					onClick = {
