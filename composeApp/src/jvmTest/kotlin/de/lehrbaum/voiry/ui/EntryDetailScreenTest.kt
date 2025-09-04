@@ -15,7 +15,10 @@ import androidx.compose.ui.test.runComposeUiTest
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.LifecycleRegistry
+import androidx.lifecycle.ViewModelStore
+import androidx.lifecycle.ViewModelStoreOwner
 import androidx.lifecycle.compose.LocalLifecycleOwner
+import androidx.lifecycle.viewmodel.compose.LocalViewModelStoreOwner
 import de.lehrbaum.voiry.UiTest
 import de.lehrbaum.voiry.api.v1.DiaryClient
 import de.lehrbaum.voiry.api.v1.TranscriptionStatus
@@ -60,7 +63,10 @@ class EntryDetailScreenTest {
 			every { player.isAvailable } returns true
 
 			setContent {
-				CompositionLocalProvider(LocalLifecycleOwner provides EntryFakeLifecycleOwner()) {
+				CompositionLocalProvider(
+					LocalLifecycleOwner provides EntryFakeLifecycleOwner(),
+					LocalViewModelStoreOwner provides EntryFakeViewModelStoreOwner(),
+				) {
 					MaterialTheme {
 						EntryDetailScreen(
 							diaryClient = client,
@@ -103,7 +109,10 @@ class EntryDetailScreenTest {
 			every { player.isAvailable } returns true
 
 			setContent {
-				CompositionLocalProvider(LocalLifecycleOwner provides EntryFakeLifecycleOwner()) {
+				CompositionLocalProvider(
+					LocalLifecycleOwner provides EntryFakeLifecycleOwner(),
+					LocalViewModelStoreOwner provides EntryFakeViewModelStoreOwner(),
+				) {
 					MaterialTheme {
 						EntryDetailScreen(
 							diaryClient = client,
@@ -151,7 +160,10 @@ class EntryDetailScreenTest {
 			every { player.isAvailable } returns true
 
 			setContent {
-				CompositionLocalProvider(LocalLifecycleOwner provides EntryFakeLifecycleOwner()) {
+				CompositionLocalProvider(
+					LocalLifecycleOwner provides EntryFakeLifecycleOwner(),
+					LocalViewModelStoreOwner provides EntryFakeViewModelStoreOwner(),
+				) {
 					MaterialTheme {
 						EntryDetailScreen(
 							diaryClient = client,
@@ -186,7 +198,10 @@ class EntryDetailScreenTest {
 			var backCalled = false
 
 			setContent {
-				CompositionLocalProvider(LocalLifecycleOwner provides EntryFakeLifecycleOwner()) {
+				CompositionLocalProvider(
+					LocalLifecycleOwner provides EntryFakeLifecycleOwner(),
+					LocalViewModelStoreOwner provides EntryFakeViewModelStoreOwner(),
+				) {
 					MaterialTheme {
 						EntryDetailScreen(
 							diaryClient = client,
@@ -224,7 +239,10 @@ class EntryDetailScreenTest {
 			var backCalled = false
 
 			setContent {
-				CompositionLocalProvider(LocalLifecycleOwner provides EntryFakeLifecycleOwner()) {
+				CompositionLocalProvider(
+					LocalLifecycleOwner provides EntryFakeLifecycleOwner(),
+					LocalViewModelStoreOwner provides EntryFakeViewModelStoreOwner(),
+				) {
 					MaterialTheme {
 						EntryDetailScreen(
 							diaryClient = client,
@@ -262,7 +280,10 @@ class EntryDetailScreenTest {
 			every { player.isAvailable } returns true
 
 			setContent {
-				CompositionLocalProvider(LocalLifecycleOwner provides EntryFakeLifecycleOwner()) {
+				CompositionLocalProvider(
+					LocalLifecycleOwner provides EntryFakeLifecycleOwner(),
+					LocalViewModelStoreOwner provides EntryFakeViewModelStoreOwner(),
+				) {
 					MaterialTheme {
 						EntryDetailScreen(
 							diaryClient = client,
@@ -322,6 +343,10 @@ private class EntryFakeLifecycleOwner : LifecycleOwner {
 		currentState = Lifecycle.State.RESUMED
 	}
 	override val lifecycle: Lifecycle get() = registry
+}
+
+private class EntryFakeViewModelStoreOwner : ViewModelStoreOwner {
+	override val viewModelStore: ViewModelStore = ViewModelStore()
 }
 
 private class ReadyTranscriber : Transcriber {
