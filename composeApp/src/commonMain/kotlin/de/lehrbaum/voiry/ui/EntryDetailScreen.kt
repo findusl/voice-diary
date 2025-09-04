@@ -16,31 +16,21 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.rememberUpdatedState
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.viewmodel.compose.viewModel
 import de.lehrbaum.voiry.api.v1.DiaryClient
-import de.lehrbaum.voiry.api.v1.TranscriptionStatus
-import de.lehrbaum.voiry.api.v1.UpdateTranscriptionRequest
 import de.lehrbaum.voiry.audio.Player
 import de.lehrbaum.voiry.audio.Transcriber
 import de.lehrbaum.voiry.audio.platformPlayer
 import de.lehrbaum.voiry.audio.platformTranscriber
-import kotlin.time.Clock
 import kotlin.time.ExperimentalTime
 import kotlin.uuid.ExperimentalUuidApi
 import kotlin.uuid.Uuid
-import kotlinx.coroutines.launch
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.toLocalDateTime
-import kotlinx.io.Buffer
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalUuidApi::class, ExperimentalTime::class, ExperimentalLayoutApi::class)
 @Composable
@@ -51,35 +41,17 @@ fun EntryDetailScreen(
 	player: Player = platformPlayer,
 	transcriber: Transcriber? = platformTranscriber,
 ) {
-	val scope = rememberCoroutineScope()
-	val entryFlow = remember(entryId) { diaryClient.entryFlow(entryId) }
-	val entry = entryFlow.collectAsStateWithLifecycle().value ?: return
-	var audio by remember { mutableStateOf<ByteArray?>(null) }
-	var isPlaying by remember { mutableStateOf(false) }
-	var error by remember { mutableStateOf<String?>(null) }
-	var isEditing by remember { mutableStateOf(false) }
-	var editedText by remember { mutableStateOf(entry.transcriptionText ?: "") }
-	var isSaving by remember { mutableStateOf(false) }
-
-	androidx.compose.runtime.LaunchedEffect(entryId) {
-		runCatching { diaryClient.getAudio(entryId) }
-			.onSuccess { audio = it }
-			.onFailure { e -> error = e.message }
+	val viewModel = viewModel<EntryDetailViewModel>(key = entryId.toString()) {
+		EntryDetailViewModel(diaryClient, entryId, player, transcriber)
 	}
-
-	DisposableEffect(player) {
-		onDispose {
-			player.close()
-		}
-	}
+	val state by viewModel.uiState.collectAsStateWithLifecycle()
+	val entry = state.entry ?: return
 
 	Scaffold(
 		topBar = {
 			TopAppBar(
 				title = { Text(entry.title) },
-				navigationIcon = {
-					TextButton(onClick = onBack) { Text("Back") }
-				},
+				navigationIcon = { TextButton(onClick = onBack) { Text("Back") } },
 			)
 		},
 	) { padding ->
@@ -109,55 +81,32 @@ fun EntryDetailScreen(
 						}
 					}
 			Text("Recorded at: $recordedAtFormatted")
-			if (isEditing) {
+			if (state.isEditing) {
 				OutlinedTextField(
-					value = editedText,
-					onValueChange = { editedText = it },
+					value = state.editedText,
+					onValueChange = { viewModel.updateEditedText(it) },
 					modifier = Modifier.fillMaxWidth(),
 				)
 				Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
 					TextButton(
-						enabled = !isSaving,
-						onClick = {
-							isEditing = false
-							editedText = entry.transcriptionText ?: ""
-						},
+						enabled = !state.isSaving,
+						onClick = { viewModel.cancelEdit() },
 					) { Text("Cancel") }
 					TextButton(
 						enabled =
-							!isSaving &&
-								editedText.isNotBlank() &&
-								editedText != (entry.transcriptionText ?: ""),
-						onClick = {
-							scope.launch {
-								isSaving = true
-								runCatching {
-									diaryClient.updateTranscription(
-										entry.id,
-										UpdateTranscriptionRequest(
-											editedText,
-											TranscriptionStatus.DONE,
-											Clock.System.now(),
-										),
-									)
-								}.onSuccess {
-									isEditing = false
-								}.onFailure { e -> error = e.message }
-								isSaving = false
-							}
-						},
+							!state.isSaving &&
+								state.editedText.isNotBlank() &&
+								state.editedText != (entry.transcriptionText ?: ""),
+						onClick = { viewModel.saveEdit() },
 					) { Text("Save") }
 				}
-				if (isSaving) {
+				if (state.isSaving) {
 					CircularProgressIndicator()
 				}
 			} else {
 				Text(entry.transcriptionText ?: entry.transcriptionStatus.displayName())
 				TextButton(
-					onClick = {
-						editedText = entry.transcriptionText ?: ""
-						isEditing = true
-					},
+					onClick = { viewModel.startEditing() },
 				) { Text("Edit") }
 			}
 			FlowRow(
@@ -165,77 +114,26 @@ fun EntryDetailScreen(
 				horizontalArrangement = Arrangement.spacedBy(8.dp),
 				verticalArrangement = Arrangement.spacedBy(8.dp),
 			) {
-				audio?.let { data ->
+				state.audio?.let {
 					TextButton(
-						onClick = {
-							if (isPlaying) {
-								player.stop()
-							} else {
-								player.play(data)
-							}
-							isPlaying = !isPlaying
-						},
+						onClick = { viewModel.togglePlayback() },
 					) {
-						Text(if (isPlaying) "Stop" else "Play")
+						Text(if (state.isPlaying) "Stop" else "Play")
 					}
 				}
-				val latestAudio by rememberUpdatedState(audio)
-				val setError by rememberUpdatedState<(String?) -> Unit> { error = it }
-				val transcribeAction = remember(diaryClient, transcriber, entry.id, scope, setError) {
-					{
-						val audioData = latestAudio
-						val t = transcriber
-						if (audioData != null && t != null) {
-							scope.launch {
-								transcribeEntry(
-									diaryClient,
-									t,
-									entry.id,
-									audioData,
-								).onFailure { e -> setError(e.message) }
-							}
-						} else if (t == null) {
-							setError("Transcriber unavailable")
-						}
-						Unit
-					}
-				}
-				TranscribeButtonWithProgress(transcriber = transcriber, onTranscribe = transcribeAction)
+				TranscribeButtonWithProgress(
+					transcriber = viewModel.transcriber,
+					onTranscribe = { viewModel.transcribe() },
+				)
 				TextButton(
-					onClick = {
-						scope.launch {
-							runCatching { diaryClient.deleteEntry(entry.id) }
-								.onSuccess { onBack() }
-								.onFailure { e -> error = e.message }
-						}
-					},
+					onClick = { viewModel.delete(onBack) },
 				) {
 					Text("Delete")
 				}
 			}
-			if (error != null) {
-				Text("Error: $error")
+			if (state.error != null) {
+				Text("Error: ${state.error}")
 			}
 		}
 	}
 }
-
-@OptIn(ExperimentalTime::class, ExperimentalUuidApi::class)
-private suspend fun transcribeEntry(
-	diaryClient: DiaryClient,
-	transcriber: Transcriber,
-	entryId: Uuid,
-	audio: ByteArray,
-): Result<Unit> =
-	runCatching {
-		val buffer = Buffer().apply { write(audio) }
-		val text = transcriber.transcribe(buffer)
-		diaryClient.updateTranscription(
-			entryId,
-			UpdateTranscriptionRequest(
-				text,
-				TranscriptionStatus.DONE,
-				Clock.System.now(),
-			),
-		)
-	}
