@@ -10,6 +10,6 @@ WORKDIR /app
 COPY --from=build /src/server/build/libs/*-all.jar app.jar
 ENV VOICE_DIARY_DB_PATH=/data
 VOLUME /data
-EXPOSE 8080
+EXPOSE 8888
 ENTRYPOINT ["java","-jar","/app/app.jar"]
 

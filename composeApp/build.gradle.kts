@@ -21,7 +21,7 @@ val localProps = Properties().apply {
 	val f = rootProject.file("local.properties")
 	if (f.exists()) f.inputStream().use { load(it) }
 }
-val backendUrl = localProps.getProperty("backendUrl") ?: "http://localhost:8080"
+val backendUrl = localProps.getProperty("backendUrl") ?: "http://localhost:8888"
 
 buildkonfig {
 	packageName = "de.lehrbaum.voiry"
