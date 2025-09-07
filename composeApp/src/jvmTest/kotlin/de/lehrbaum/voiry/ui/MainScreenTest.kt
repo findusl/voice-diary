@@ -41,9 +41,15 @@ import org.junit.experimental.categories.Category
 @Category(UiTest::class)
 class MainScreenTest {
 	@Test
-	fun shows_error_banner_when_connection_fails() =
+	fun error_banner_persists_across_retries_and_disappears_on_success() =
 		runComposeUiTest {
-			val client = FakeDiaryClient(connectionError = "Connection refused")
+			val client =
+				FakeDiaryClient(
+					connectionErrors = mutableListOf(
+						"Connection refused",
+						"Still no connection",
+					),
+				)
 			val recorder = mock<Recorder>()
 			every { recorder.isAvailable } returns true
 
@@ -66,6 +72,17 @@ class MainScreenTest {
 			waitForIdle()
 
 			onNodeWithText("Error: Connection refused", substring = false).assertIsDisplayed()
+
+			client.retry()
+			waitForIdle()
+
+			onNodeWithText("Error: Still no connection", substring = false).assertIsDisplayed()
+			onAllNodesWithText("Error: Connection refused", substring = false).assertCountEquals(0)
+
+			client.retry()
+			waitForIdle()
+
+			onAllNodesWithText("Error: Still no connection", substring = false).assertCountEquals(0)
 		}
 
 	@Test
@@ -240,10 +257,16 @@ private class FakeDiaryClient(
 			transcriptionStatus = TranscriptionStatus.DONE,
 		)
 	},
-	connectionError: String? = null,
+	connectionErrors: MutableList<String> = mutableListOf(),
 ) : DiaryClient(baseUrl = "", httpClient = HttpClient()) {
+	private val pendingErrors = ArrayDeque(connectionErrors)
+
 	init {
-		connectionErrorState.value = connectionError
+		connectionErrorState.value = pendingErrors.removeFirstOrNull()
+	}
+
+	fun retry() {
+		connectionErrorState.value = pendingErrors.removeFirstOrNull()
 	}
 
 	private val _entries = MutableStateFlow(initial)
