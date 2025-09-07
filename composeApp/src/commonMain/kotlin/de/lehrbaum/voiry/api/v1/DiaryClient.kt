@@ -60,6 +60,10 @@ open class DiaryClient(
 ) : AutoCloseable {
 	private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
 
+	init {
+		Napier.d("Created DiaryClient for $baseUrl")
+	}
+
 	open val entries: StateFlow<List<VoiceDiaryEntry>> = flow {
 		var retryDelayMillis = 1_000L
 		while (currentCoroutineContext().isActive) {

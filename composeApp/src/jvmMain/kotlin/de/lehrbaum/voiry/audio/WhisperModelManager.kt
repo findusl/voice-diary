@@ -38,6 +38,7 @@ class WhisperModelManager(
 			modelDir.createDirectories()
 			cleanupLeftoverPartFiles(modelDir)
 			if (modelPath.exists()) {
+				Napier.d("Whisper model already exists at ${modelPath.toAbsolutePath()}", tag = TAG)
 				_modelDownloadProgress.value = 1f
 			} else {
 				downloadModel(modelDir)
@@ -47,6 +48,7 @@ class WhisperModelManager(
 
 	private fun cleanupLeftoverPartFiles(modelDir: Path) {
 		modelDir.listDirectoryEntries("*.part").forEach {
+			Napier.i("Deleting leftover part file ${it.toAbsolutePath()}", tag = TAG)
 			runCatching { it.deleteIfExists() }
 		}
 	}
@@ -71,6 +73,7 @@ class WhisperModelManager(
 			}
 		}
 		Files.move(tmp, modelPath, StandardCopyOption.ATOMIC_MOVE)
+		Napier.i("Whisper model downloaded to ${modelPath.toAbsolutePath()}", tag = TAG)
 		_modelDownloadProgress.value = 1f
 	}
 
