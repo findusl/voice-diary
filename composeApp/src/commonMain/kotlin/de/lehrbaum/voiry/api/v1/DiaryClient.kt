@@ -72,8 +72,8 @@ open class DiaryClient(
 		var retryDelayMillis = 1_000L
 		while (currentCoroutineContext().isActive) {
 			try {
-				connectionErrorState.value = null
 				httpClient.sse("$baseUrl/v1/entries") {
+					connectionErrorState.value = null
 					incoming.collect { event ->
 						event.data?.let {
 							val parsed = Json.decodeFromString(DiaryEvent.serializer(), it)

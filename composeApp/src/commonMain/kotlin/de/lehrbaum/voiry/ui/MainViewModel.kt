@@ -39,8 +39,9 @@ class MainViewModel(
 		combine(
 			baseState,
 			diaryClient.entries.map { entries -> entries.map { it.toUi() } },
-		) { state, entries ->
-			state.copy(entries = entries)
+			diaryClient.connectionError,
+		) { state, entries, error ->
+			state.copy(entries = entries, error = error)
 		}.stateIn(
 			viewModelScope,
 			SharingStarted.WhileSubscribed(stopTimeoutMillis = 5_000),
