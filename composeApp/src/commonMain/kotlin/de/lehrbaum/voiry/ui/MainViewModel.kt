@@ -18,8 +18,11 @@ import kotlin.time.ExperimentalTime
 import kotlin.uuid.ExperimentalUuidApi
 import kotlin.uuid.Uuid
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.io.Buffer
@@ -31,16 +34,18 @@ class MainViewModel(
 	private val recorder: Recorder = platformRecorder,
 	private val transcriber: Transcriber?,
 ) : ViewModel(), Closeable {
-	private val _uiState = MutableStateFlow(MainUiState(recorderAvailable = recorder.isAvailable))
-	val uiState: StateFlow<MainUiState> = _uiState.asStateFlow()
-
-	init {
-		viewModelScope.launch {
-			diaryClient.entries.collect { entries ->
-				_uiState.update { it.copy(entries = entries.map { it.toUi() }) }
-			}
-		}
-	}
+	private val baseState = MutableStateFlow(MainUiState(recorderAvailable = recorder.isAvailable))
+	val uiState: StateFlow<MainUiState> =
+		combine(
+			baseState,
+			diaryClient.entries.map { entries -> entries.map { it.toUi() } },
+		) { state, entries ->
+			state.copy(entries = entries)
+		}.stateIn(
+			viewModelScope,
+			SharingStarted.WhileSubscribed(stopTimeoutMillis = 5_000),
+			baseState.value,
+		)
 
 	override fun onCleared() {
 		super.onCleared()
@@ -55,9 +60,9 @@ class MainViewModel(
 	fun startRecording() {
 		runCatching { recorder.startRecording() }
 			.onSuccess {
-				_uiState.update { it.copy(isRecording = true, error = null) }
+				baseState.update { it.copy(isRecording = true, error = null) }
 			}.onFailure { e ->
-				_uiState.update {
+				baseState.update {
 					it.copy(isRecording = false, error = e.message ?: "Failed to start recording")
 				}
 			}
@@ -69,7 +74,7 @@ class MainViewModel(
 			stopResult
 				.onSuccess { buffer ->
 					val bytes = buffer.readByteArray()
-					_uiState.update {
+					baseState.update {
 						it.copy(
 							pendingRecording = Recording(bytes),
 							isRecording = false,
@@ -77,26 +82,26 @@ class MainViewModel(
 						)
 					}
 				}.onFailure { e ->
-					_uiState.update { it.copy(isRecording = false, error = e.message) }
+					baseState.update { it.copy(isRecording = false, error = e.message) }
 				}
 		}
 	}
 
 	fun dismissRecorderUnavailable() {
-		_uiState.update { it.copy(recorderUnavailableDismissed = true) }
+		baseState.update { it.copy(recorderUnavailableDismissed = true) }
 	}
 
 	fun updatePendingTitle(title: String) {
-		_uiState.update { it.copy(pendingTitle = title) }
+		baseState.update { it.copy(pendingTitle = title) }
 	}
 
 	fun cancelSaveRecording() {
-		_uiState.update { it.copy(pendingRecording = null, pendingTitle = "") }
+		baseState.update { it.copy(pendingRecording = null, pendingTitle = "") }
 	}
 
 	fun saveRecording() {
-		val recording = _uiState.value.pendingRecording ?: return
-		val title = _uiState.value.pendingTitle
+		val recording = baseState.value.pendingRecording ?: return
+		val title = baseState.value.pendingTitle
 		viewModelScope.launch {
 			val bytes = recording.data
 			val entry = VoiceDiaryEntry(
@@ -106,15 +111,15 @@ class MainViewModel(
 				duration = Duration.ZERO,
 			)
 			runCatching { diaryClient.createEntry(entry, bytes) }
-				.onFailure { e -> _uiState.update { it.copy(error = e.message) } }
-			_uiState.update { it.copy(pendingRecording = null, pendingTitle = "") }
+				.onFailure { e -> baseState.update { it.copy(error = e.message) } }
+			baseState.update { it.copy(pendingRecording = null, pendingTitle = "") }
 		}
 	}
 
 	fun deleteEntry(entry: UiVoiceDiaryEntry) {
 		viewModelScope.launch {
 			runCatching { diaryClient.deleteEntry(entry.id) }
-				.onFailure { e -> _uiState.update { it.copy(error = e.message) } }
+				.onFailure { e -> baseState.update { it.copy(error = e.message) } }
 		}
 	}
 
@@ -134,7 +139,7 @@ class MainViewModel(
 					),
 				)
 			}.onFailure { e ->
-				_uiState.update { it.copy(error = e.message) }
+				baseState.update { it.copy(error = e.message) }
 				runCatching {
 					diaryClient.updateTranscription(
 						entry.id,
