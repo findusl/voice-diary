@@ -41,6 +41,34 @@ import org.junit.experimental.categories.Category
 @Category(UiTest::class)
 class MainScreenTest {
 	@Test
+	fun shows_error_banner_when_connection_fails() =
+		runComposeUiTest {
+			val client = FakeDiaryClient(connectionError = "Connection refused")
+			val recorder = mock<Recorder>()
+			every { recorder.isAvailable } returns true
+
+			setContent {
+				CompositionLocalProvider(
+					LocalLifecycleOwner provides FakeLifecycleOwner(),
+					LocalViewModelStoreOwner provides FakeViewModelStoreOwner(),
+				) {
+					MaterialTheme {
+						MainScreen(
+							diaryClient = client,
+							recorder = recorder,
+							transcriber = null,
+							onEntryClick = { },
+						)
+					}
+				}
+			}
+
+			waitForIdle()
+
+			onNodeWithText("Error: Connection refused", substring = false).assertIsDisplayed()
+		}
+
+	@Test
 	fun displays_seeded_recordings_and_title_and_hides_fab_when_unavailable() =
 		runComposeUiTest {
 			val client = FakeDiaryClient()
@@ -212,7 +240,12 @@ private class FakeDiaryClient(
 			transcriptionStatus = TranscriptionStatus.DONE,
 		)
 	},
+	connectionError: String? = null,
 ) : DiaryClient(baseUrl = "", httpClient = HttpClient()) {
+	init {
+		connectionErrorState.value = connectionError
+	}
+
 	private val _entries = MutableStateFlow(initial)
 	override val entries: MutableStateFlow<List<VoiceDiaryEntry>> get() = _entries
 

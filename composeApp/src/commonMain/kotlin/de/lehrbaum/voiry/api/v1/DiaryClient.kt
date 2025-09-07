@@ -34,8 +34,10 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.runningFold
@@ -59,6 +61,8 @@ open class DiaryClient(
 	},
 ) : AutoCloseable {
 	private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+	protected val connectionErrorState = MutableStateFlow<String?>(null)
+	open val connectionError: StateFlow<String?> = connectionErrorState.asStateFlow()
 
 	init {
 		Napier.d("Created DiaryClient for $baseUrl")
@@ -68,6 +72,7 @@ open class DiaryClient(
 		var retryDelayMillis = 1_000L
 		while (currentCoroutineContext().isActive) {
 			try {
+				connectionErrorState.value = null
 				httpClient.sse("$baseUrl/v1/entries") {
 					incoming.collect { event ->
 						event.data?.let {
@@ -83,6 +88,7 @@ open class DiaryClient(
 					break
 				}
 				Napier.e("SSE connection failed", e)
+				connectionErrorState.value = e.message
 				delay(retryDelayMillis)
 				retryDelayMillis = (retryDelayMillis * 2).coerceAtMost(60_000L)
 			}
