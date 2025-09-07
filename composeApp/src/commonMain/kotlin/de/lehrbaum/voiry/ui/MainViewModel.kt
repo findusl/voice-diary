@@ -1,6 +1,6 @@
 package de.lehrbaum.voiry.ui
 
-import androidx.compose.runtime.Stable
+import androidx.compose.runtime.Immutable
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import de.lehrbaum.voiry.api.v1.DiaryClient
@@ -167,5 +167,5 @@ data class MainUiState(
 	val recorderUnavailableDismissed: Boolean = false,
 )
 
-@Stable
-data class Recording(val data: ByteArray)
+@Immutable
+class Recording(val data: ByteArray)
