@@ -2,7 +2,6 @@ package de.lehrbaum.voiry.ui
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
-import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -15,7 +14,6 @@ import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import de.lehrbaum.voiry.audio.Transcriber
 import de.lehrbaum.voiry.audio.isWhisperAvailable
@@ -38,14 +36,12 @@ fun TranscribeButtonWithProgress(
 
 	if (progress < 1f) {
 		Row(modifier, verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-			LinearProgressIndicator(progress = { progress }, modifier = Modifier.weight(1f))
 			val percent = (progress * 100).toInt()
 			Text("$percent%")
 		}
 	} else {
 		TextButton(onClick = onClick, modifier = modifier) {
 			Text("Transcribe")
-			Text("\u2713", color = Color(0xFF4CAF50))
 		}
 	}
 }
