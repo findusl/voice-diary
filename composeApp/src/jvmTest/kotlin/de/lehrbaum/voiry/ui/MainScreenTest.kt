@@ -72,14 +72,12 @@ class MainScreenTest {
 				}
 			}
 
-			waitForIdle()
-
-			onNodeWithText("Error: Connection refused").assertIsDisplayed()
+			waitUntilAtLeastOneExists(hasText("Error: Connection refused"))
 
 			client.retry()
 
 			waitUntilAtLeastOneExists(hasText("Error: Still no connection"))
-			onAllNodesWithText("Error: Connection refused", useUnmergedTree = true).assertCountEquals(0)
+			onAllNodesWithText("Error: Connection refused").assertCountEquals(0)
 
 			client.retry()
 
@@ -109,10 +107,7 @@ class MainScreenTest {
 				}
 			}
 
-			waitForIdle()
-
-			// Title present
-			onNodeWithText("Voice Diary").assertIsDisplayed()
+			waitUntilAtLeastOneExists(hasText("Voice Diary")) // Title present
 
 			// The list contains three predefined recordings with transcripts
 			onNodeWithText("Recording 1").assertIsDisplayed()
@@ -127,8 +122,9 @@ class MainScreenTest {
 			// Info banner can be dismissed
 			onNodeWithText("Audio recorder not available on this platform/device.").assertIsDisplayed()
 			onNodeWithText("Dismiss").performClick()
-			waitForIdle()
-			onAllNodesWithText("Audio recorder not available on this platform/device.").assertCountEquals(0)
+			waitUntilDoesNotExist(
+				hasText("Audio recorder not available on this platform/device."),
+			)
 		}
 
 	@Test
@@ -162,18 +158,16 @@ class MainScreenTest {
 
 			// Start recording
 			onNodeWithText("Record").performClick()
-			waitForIdle()
-			onNodeWithText("Stop").assertIsDisplayed()
+			waitUntilAtLeastOneExists(hasText("Stop"))
 
 			// Stop recording and confirm dialog
 			onNodeWithText("Stop").performClick()
-			waitForIdle()
+			waitUntilAtLeastOneExists(hasText("Title"))
 			onNodeWithText("Title").performTextInput("My Entry")
 			onNodeWithText("Save").performClick()
-			waitForIdle()
+			waitUntilAtLeastOneExists(hasText("My Entry"))
 			onNodeWithText("Record").assertIsDisplayed()
 			// New item appears at top with expected title and transcript
-			onNodeWithText("My Entry").assertIsDisplayed()
 			onNodeWithText("Transcript for My Entry").assertIsDisplayed()
 		}
 
@@ -200,12 +194,10 @@ class MainScreenTest {
 				}
 			}
 
-			waitForIdle()
+			waitUntilAtLeastOneExists(hasText("Recording 1"))
 
-			onNodeWithText("Recording 1").assertIsDisplayed()
 			onAllNodesWithText("Delete")[0].performClick()
-			waitForIdle()
-			onAllNodesWithText("Recording 1").assertCountEquals(0)
+			waitUntilDoesNotExist(hasText("Recording 1"))
 		}
 
 	@Test
@@ -239,9 +231,8 @@ class MainScreenTest {
 				}
 			}
 
-			waitForIdle()
+			waitUntilAtLeastOneExists(hasText("Recording 1"))
 
-			onNodeWithText("Recording 1").assertIsDisplayed()
 			onNodeWithText("Not yet transcribed").assertIsDisplayed()
 		}
 }

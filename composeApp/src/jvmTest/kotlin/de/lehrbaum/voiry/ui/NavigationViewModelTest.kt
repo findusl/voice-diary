@@ -7,10 +7,11 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.test.ExperimentalTestApi
-import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.runComposeUiTest
+import androidx.compose.ui.test.waitUntilAtLeastOneExists
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.LifecycleRegistry
@@ -98,22 +99,20 @@ class NavigationViewModelTest {
 				}
 			}
 
-			waitForIdle()
+			waitUntilAtLeastOneExists(hasText("Recording 1"))
 
 			onNodeWithText("Recording 1").performClick()
-			waitForIdle()
-			onNodeWithText("Transcript 1").assertIsDisplayed()
+			waitUntilAtLeastOneExists(hasText("Transcript 1"))
 
 			onNodeWithText("Back").performClick()
-			waitForIdle()
+			waitUntilAtLeastOneExists(hasText("Recording 1"))
 			verify { player1.close() }
 
 			onNodeWithText("Recording 2").performClick()
-			waitForIdle()
-			onNodeWithText("Transcript 2").assertIsDisplayed()
+			waitUntilAtLeastOneExists(hasText("Transcript 2"))
 
 			onNodeWithText("Back").performClick()
-			waitForIdle()
+			waitUntilAtLeastOneExists(hasText("Recording 2"))
 			verify { player2.close() }
 		}
 }
