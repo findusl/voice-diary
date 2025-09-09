@@ -1,3 +1,4 @@
+import buildsrc.markBuiltInClassesAsStable
 import com.codingfeline.buildkonfig.compiler.FieldSpec.Type.STRING
 import java.util.Properties
 import org.gradle.api.tasks.testing.Test
@@ -23,6 +24,9 @@ val localProps = Properties().apply {
 }
 val backendUrl = localProps.getProperty("backendUrl") ?: "http://localhost:8888"
 
+// Classes treated as stable by the Compose compiler.
+val stableClasses = listOf("kotlin.uuid.Uuid")
+
 buildkonfig {
 	packageName = "de.lehrbaum.voiry"
 	exposeObjectWithName = "BuildKonfig"
@@ -36,10 +40,14 @@ kotlin {
 		@OptIn(ExperimentalKotlinGradlePluginApi::class)
 		compilerOptions {
 			jvmTarget.set(JvmTarget.JVM_11)
+			markBuiltInClassesAsStable(project, stableClasses)
 		}
 	}
 
-	jvm()
+	jvm {
+		@OptIn(ExperimentalKotlinGradlePluginApi::class)
+		compilerOptions { markBuiltInClassesAsStable(project, stableClasses) }
+	}
 
 	@OptIn(ExperimentalComposeLibrary::class)
 	sourceSets {
