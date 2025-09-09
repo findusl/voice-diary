@@ -38,4 +38,20 @@ class DiaryServiceImplTest {
 			assertEquals(listOf<DiaryEvent>(DiaryEvent.EntriesSnapshot(emptyList())), events)
 			job.cancel()
 		}
+
+	@Test
+	fun `deleteEntry on missing entry emits no events`() =
+		runBlocking {
+			val repository = DiaryRepository(Files.createTempDirectory("deleteEntryTest"))
+			val service = DiaryServiceImpl.create(repository)
+			val events = mutableListOf<DiaryEvent>()
+			val job = launch { service.eventFlow().collect { events += it } }
+			withTimeout(1_000) {
+				while (events.isEmpty()) yield()
+			}
+			service.deleteEntry(Uuid.random())
+			delay(100)
+			assertEquals(listOf<DiaryEvent>(DiaryEvent.EntriesSnapshot(emptyList())), events)
+			job.cancel()
+		}
 }
