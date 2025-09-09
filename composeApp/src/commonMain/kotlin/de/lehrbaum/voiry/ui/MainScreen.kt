@@ -78,6 +78,13 @@ fun MainScreen(
 					onAction = { viewModel.dismissRecorderUnavailable() },
 				)
 			}
+			if (state.cacheUnavailable && !state.cacheUnavailableDismissed) {
+				InfoBanner(
+					text = "Audio cache unavailable; recordings won't be stored locally.",
+					actionLabel = "Dismiss",
+					onAction = { viewModel.dismissCacheUnavailable() },
+				)
+			}
 			if (state.error != null) {
 				val permissionRelated =
 					state.error?.contains("permission", ignoreCase = true) == true && onRequestAudioPermission != null

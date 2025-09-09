@@ -3,6 +3,7 @@ package de.lehrbaum.voiry.api.v1
 import de.lehrbaum.voiry.DiaryRepository
 import de.lehrbaum.voiry.DiaryService
 import de.lehrbaum.voiry.DiaryServiceImpl
+import de.lehrbaum.voiry.audio.AudioCache
 import de.lehrbaum.voiry.initLogging
 import de.lehrbaum.voiry.module
 import dev.mokkery.answering.calls
@@ -50,6 +51,7 @@ class DiaryClientTest {
 	@BeforeTest
 	fun setupLogging() {
 		initLogging()
+		AudioCache.setBaseDirForTest(Files.createTempDirectory("diaryClientTestCache").toString())
 	}
 
 	@Test

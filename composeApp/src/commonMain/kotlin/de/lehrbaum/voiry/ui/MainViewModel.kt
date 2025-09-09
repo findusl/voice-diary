@@ -38,7 +38,12 @@ class MainViewModel(
 	private val recorder: Recorder = platformRecorder,
 	private val transcriber: Transcriber?,
 ) : ViewModel(), Closeable {
-	private val baseState = MutableStateFlow(MainUiState(recorderAvailable = recorder.isAvailable))
+	private val baseState = MutableStateFlow(
+		MainUiState(
+			recorderAvailable = recorder.isAvailable,
+			cacheUnavailable = !AudioCache.enabled,
+		),
+	)
 	val uiState: StateFlow<MainUiState> =
 		combine(
 			baseState,
@@ -79,7 +84,6 @@ class MainViewModel(
 			stopResult
 				.onSuccess { buffer ->
 					val bytes = buffer.readByteArray()
-					AudioCache.cacheRecording(bytes)
 					baseState.update {
 						it.copy(
 							pendingRecording = Recording(bytes),
@@ -95,6 +99,10 @@ class MainViewModel(
 
 	fun dismissRecorderUnavailable() {
 		baseState.update { it.copy(recorderUnavailableDismissed = true) }
+	}
+
+	fun dismissCacheUnavailable() {
+		baseState.update { it.copy(cacheUnavailableDismissed = true) }
 	}
 
 	fun updatePendingTitle(title: String) {
@@ -118,7 +126,7 @@ class MainViewModel(
 			)
 			runCatching { diaryClient.createEntry(entry, bytes) }
 				.onFailure { e -> baseState.update { it.copy(error = e.message) } }
-			AudioCache.putAudio(entry.id, bytes)
+			runCatching { AudioCache.putAudio(entry.id, bytes) }
 			baseState.update { it.copy(pendingRecording = null, pendingTitle = "") }
 		}
 	}
@@ -172,6 +180,8 @@ data class MainUiState(
 	val error: String? = null,
 	val recorderAvailable: Boolean = true,
 	val recorderUnavailableDismissed: Boolean = false,
+	val cacheUnavailable: Boolean = false,
+	val cacheUnavailableDismissed: Boolean = false,
 )
 
 @Immutable

@@ -171,11 +171,11 @@ open class DiaryClient(
 	}
 
 	open suspend fun getAudio(id: Uuid): ByteArray {
-		AudioCache.getAudio(id)?.let { return it }
+		runCatching { AudioCache.getAudio(id) }.getOrNull()?.let { return it }
 		val response = httpClient.get("$baseUrl/v1/entries/$id/audio")
 		throwIfFailed(response)
 		val bytes: ByteArray = response.body()
-		AudioCache.putAudio(id, bytes)
+		runCatching { AudioCache.putAudio(id, bytes) }
 		return bytes
 	}
 
