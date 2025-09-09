@@ -34,6 +34,8 @@ import kotlin.time.Duration
 import kotlin.time.ExperimentalTime
 import kotlin.uuid.ExperimentalUuidApi
 import kotlin.uuid.Uuid
+import kotlinx.collections.immutable.PersistentList
+import kotlinx.collections.immutable.toPersistentList
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.io.Buffer
 import kotlinx.io.writeString
@@ -211,7 +213,7 @@ class MainScreenTest {
 				transcriptionText = null,
 				transcriptionStatus = TranscriptionStatus.NONE,
 			)
-			val client = FakeDiaryClient(initial = listOf(entry))
+			val client = FakeDiaryClient(initial = listOf(entry).toPersistentList())
 			val recorder = mock<Recorder>()
 			every { recorder.isAvailable } returns false
 
@@ -239,7 +241,7 @@ class MainScreenTest {
 
 @OptIn(ExperimentalTime::class, ExperimentalUuidApi::class)
 private class FakeDiaryClient(
-	initial: List<VoiceDiaryEntry> = List(3) { idx ->
+	initial: PersistentList<VoiceDiaryEntry> = List(3) { idx ->
 		VoiceDiaryEntry(
 			id = Uuid.random(),
 			title = "Recording ${idx + 1}",
@@ -248,7 +250,7 @@ private class FakeDiaryClient(
 			transcriptionText = "Transcript ${idx + 1}",
 			transcriptionStatus = TranscriptionStatus.DONE,
 		)
-	},
+	}.toPersistentList(),
 	connectionErrors: MutableList<String> = mutableListOf(),
 ) : DiaryClient(baseUrl = "", httpClient = HttpClient()) {
 	private val pendingErrors = ArrayDeque(connectionErrors)
@@ -262,19 +264,19 @@ private class FakeDiaryClient(
 	}
 
 	private val _entries = MutableStateFlow(initial)
-	override val entries: MutableStateFlow<List<VoiceDiaryEntry>> get() = _entries
+	override val entries: MutableStateFlow<PersistentList<VoiceDiaryEntry>> get() = _entries
 
 	override suspend fun createEntry(entry: VoiceDiaryEntry, audio: ByteArray): VoiceDiaryEntry {
 		val withTranscript = entry.copy(
 			transcriptionText = "Transcript for ${entry.title}",
 			transcriptionStatus = TranscriptionStatus.DONE,
 		)
-		_entries.value = listOf(withTranscript) + _entries.value
+		_entries.value = _entries.value.add(0, withTranscript)
 		return withTranscript
 	}
 
 	override suspend fun deleteEntry(id: Uuid) {
-		_entries.value = _entries.value.filterNot { it.id == id }
+		_entries.value = _entries.value.filterNot { it.id == id }.toPersistentList()
 	}
 
 	override fun close() {}

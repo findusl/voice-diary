@@ -66,6 +66,7 @@ kotlin {
 			api(libs.napier)
 			implementation(libs.lexilabs.basic.sound)
 			implementation(libs.kotlinx.datetime)
+			implementation(libs.kotlinx.collections.immutable)
 		}
 		commonTest.dependencies {
 			implementation(libs.kotlin.test)

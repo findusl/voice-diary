@@ -37,6 +37,9 @@ import kotlin.time.Duration
 import kotlin.time.ExperimentalTime
 import kotlin.uuid.ExperimentalUuidApi
 import kotlin.uuid.Uuid
+import kotlinx.collections.immutable.PersistentList
+import kotlinx.collections.immutable.persistentListOf
+import kotlinx.collections.immutable.toPersistentList
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.io.Buffer
 import org.junit.Test
@@ -145,11 +148,11 @@ private class FakeProgressTranscriber(initial: Float? = 0.5f) : Transcriber {
 
 @OptIn(ExperimentalTime::class, ExperimentalUuidApi::class)
 private class SingleEntryDiaryClient(entry: VoiceDiaryEntry) : DiaryClient("", HttpClient()) {
-	private val _entries = MutableStateFlow(listOf(entry))
-	override val entries: MutableStateFlow<List<VoiceDiaryEntry>> get() = _entries
+	private val _entries = MutableStateFlow<PersistentList<VoiceDiaryEntry>>(listOf(entry).toPersistentList())
+	override val entries: MutableStateFlow<PersistentList<VoiceDiaryEntry>> get() = _entries
 
 	override suspend fun deleteEntry(id: Uuid) {
-		_entries.value = emptyList()
+		_entries.value = persistentListOf()
 	}
 
 	override fun close() {}

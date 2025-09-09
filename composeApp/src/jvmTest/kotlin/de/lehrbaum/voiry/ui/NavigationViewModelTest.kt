@@ -36,6 +36,8 @@ import kotlin.time.Duration
 import kotlin.time.ExperimentalTime
 import kotlin.uuid.ExperimentalUuidApi
 import kotlin.uuid.Uuid
+import kotlinx.collections.immutable.PersistentList
+import kotlinx.collections.immutable.toPersistentList
 import kotlinx.coroutines.flow.MutableStateFlow
 import org.junit.Test
 import org.junit.experimental.categories.Category
@@ -121,8 +123,8 @@ class NavigationViewModelTest {
 private class NavigationFakeDiaryClient(
 	entries: List<VoiceDiaryEntry>,
 ) : DiaryClient(baseUrl = "", httpClient = HttpClient()) {
-	private val _entries = MutableStateFlow(entries)
-	override val entries: MutableStateFlow<List<VoiceDiaryEntry>> get() = _entries
+	private val _entries = MutableStateFlow<PersistentList<VoiceDiaryEntry>>(entries.toPersistentList())
+	override val entries: MutableStateFlow<PersistentList<VoiceDiaryEntry>> get() = _entries
 
 	override suspend fun getAudio(id: Uuid): ByteArray = byteArrayOf(0)
 }

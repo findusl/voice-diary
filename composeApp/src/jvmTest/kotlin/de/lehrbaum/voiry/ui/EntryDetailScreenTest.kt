@@ -41,6 +41,8 @@ import kotlin.time.Duration
 import kotlin.time.ExperimentalTime
 import kotlin.uuid.ExperimentalUuidApi
 import kotlin.uuid.Uuid
+import kotlinx.collections.immutable.PersistentList
+import kotlinx.collections.immutable.toPersistentList
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.io.Buffer
 import org.junit.Test
@@ -300,8 +302,8 @@ private class EntryFakeDiaryClient(
 	private val audio: ByteArray = byteArrayOf(0),
 	private val failDeletion: Boolean = false,
 ) : DiaryClient(baseUrl = "", httpClient = HttpClient()) {
-	private val _entries = MutableStateFlow(listOf(entry))
-	override val entries: MutableStateFlow<List<VoiceDiaryEntry>> get() = _entries
+	private val _entries = MutableStateFlow<PersistentList<VoiceDiaryEntry>>(listOf(entry).toPersistentList())
+	override val entries: MutableStateFlow<PersistentList<VoiceDiaryEntry>> get() = _entries
 	var lastUpdateRequest: UpdateTranscriptionRequest? = null
 
 	override suspend fun createEntry(entry: VoiceDiaryEntry, audio: ByteArray): VoiceDiaryEntry = entry
@@ -310,23 +312,24 @@ private class EntryFakeDiaryClient(
 		if (failDeletion) {
 			throw IllegalStateException("fail delete")
 		}
-		_entries.value = _entries.value.filterNot { it.id == id }
+		_entries.value = _entries.value.filterNot { it.id == id }.toPersistentList()
 	}
 
 	override suspend fun getAudio(id: Uuid): ByteArray = audio
 
 	override suspend fun updateTranscription(id: Uuid, request: UpdateTranscriptionRequest) {
 		lastUpdateRequest = request
-		_entries.value = _entries.value.map {
-			if (it.id == id) {
-				it.copy(
-					transcriptionText = request.transcriptionText,
-					transcriptionStatus = request.transcriptionStatus,
-				)
-			} else {
-				it
-			}
-		}
+		_entries.value = _entries.value
+			.map {
+				if (it.id == id) {
+					it.copy(
+						transcriptionText = request.transcriptionText,
+						transcriptionStatus = request.transcriptionStatus,
+					)
+				} else {
+					it
+				}
+			}.toPersistentList()
 	}
 }
 
