@@ -16,6 +16,7 @@ import io.ktor.client.plugins.sse.SSE
 import io.ktor.http.HttpStatusCode
 import io.ktor.serialization.kotlinx.json.json
 import io.ktor.server.response.respond
+import io.ktor.server.response.respondBytes
 import io.ktor.server.routing.delete
 import io.ktor.server.routing.get
 import io.ktor.server.routing.post
@@ -248,6 +249,29 @@ class DiaryClientTest {
 			createDiaryClientAgainstMockKtorApplication().use { client: DiaryClient ->
 				val result = runBlocking { client.getAudio(entry.id) }
 				assertContentEquals(audio, result)
+			}
+		}
+
+	@Test
+	fun `get audio cached`() =
+		testApplication {
+			val audio = byteArrayOf(4, 5, 6)
+			var callCount = 0
+			application {
+				routing {
+					get("/v1/entries/{id}/audio") {
+						callCount++
+						call.respondBytes(audio)
+					}
+				}
+			}
+			createDiaryClientAgainstMockKtorApplication().use { client: DiaryClient ->
+				val id = Uuid.random()
+				val first = runBlocking { client.getAudio(id) }
+				val second = runBlocking { client.getAudio(id) }
+				assertContentEquals(audio, first)
+				assertContentEquals(audio, second)
+				assertEquals(1, callCount)
 			}
 		}
 

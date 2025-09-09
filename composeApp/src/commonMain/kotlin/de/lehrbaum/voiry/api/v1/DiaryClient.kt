@@ -1,6 +1,7 @@
 package de.lehrbaum.voiry.api.v1
 
 import androidx.compose.runtime.Stable
+import de.lehrbaum.voiry.audio.AudioCache
 import io.github.aakira.napier.Napier
 import io.ktor.client.HttpClient
 import io.ktor.client.call.body
@@ -170,9 +171,12 @@ open class DiaryClient(
 	}
 
 	open suspend fun getAudio(id: Uuid): ByteArray {
+		AudioCache.getAudio(id)?.let { return it }
 		val response = httpClient.get("$baseUrl/v1/entries/$id/audio")
 		throwIfFailed(response)
-		return response.body()
+		val bytes: ByteArray = response.body()
+		AudioCache.putAudio(id, bytes)
+		return bytes
 	}
 
 	private suspend fun throwIfFailed(response: HttpResponse) {
