@@ -23,6 +23,7 @@ import de.lehrbaum.voiry.UiTest
 import de.lehrbaum.voiry.api.v1.DiaryClient
 import de.lehrbaum.voiry.api.v1.TranscriptionStatus
 import de.lehrbaum.voiry.api.v1.VoiceDiaryEntry
+import de.lehrbaum.voiry.audio.AudioCache
 import de.lehrbaum.voiry.audio.Player
 import de.lehrbaum.voiry.audio.Recorder
 import dev.mokkery.MockMode
@@ -31,6 +32,7 @@ import dev.mokkery.every
 import dev.mokkery.mock
 import dev.mokkery.verify
 import io.ktor.client.HttpClient
+import java.nio.file.Files
 import kotlin.time.Clock
 import kotlin.time.Duration
 import kotlin.time.ExperimentalTime
@@ -85,6 +87,7 @@ class NavigationViewModelTest {
 								recorder = recorder,
 								onEntryClick = { selectedEntryId = it.id },
 								transcriber = null,
+								audioCache = AudioCache(Files.createTempDirectory("navigationVM").toString()),
 							)
 						} else {
 							val player =

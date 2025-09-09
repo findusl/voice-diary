@@ -37,11 +37,12 @@ class MainViewModel(
 	private val diaryClient: DiaryClient,
 	private val recorder: Recorder = platformRecorder,
 	private val transcriber: Transcriber?,
+	private val audioCache: AudioCache = AudioCache(),
 ) : ViewModel(), Closeable {
 	private val baseState = MutableStateFlow(
 		MainUiState(
 			recorderAvailable = recorder.isAvailable,
-			cacheUnavailable = !AudioCache.enabled,
+			cacheUnavailable = !audioCache.enabled,
 		),
 	)
 	val uiState: StateFlow<MainUiState> =
@@ -126,7 +127,7 @@ class MainViewModel(
 			)
 			runCatching { diaryClient.createEntry(entry, bytes) }
 				.onFailure { e -> baseState.update { it.copy(error = e.message) } }
-			runCatching { AudioCache.putAudio(entry.id, bytes) }
+			runCatching { audioCache.putAudio(entry.id, bytes) }
 			baseState.update { it.copy(pendingRecording = null, pendingTitle = "") }
 		}
 	}

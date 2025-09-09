@@ -63,6 +63,7 @@ open class DiaryClient(
 		install(ContentNegotiation) { json() }
 		install(SSE)
 	},
+	private val audioCache: AudioCache = AudioCache(),
 ) : AutoCloseable {
 	private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
 	protected val connectionErrorState = MutableStateFlow<String?>(null)
@@ -171,11 +172,11 @@ open class DiaryClient(
 	}
 
 	open suspend fun getAudio(id: Uuid): ByteArray {
-		runCatching { AudioCache.getAudio(id) }.getOrNull()?.let { return it }
+		audioCache.getAudio(id)?.let { return it }
 		val response = httpClient.get("$baseUrl/v1/entries/$id/audio")
 		throwIfFailed(response)
 		val bytes: ByteArray = response.body()
-		runCatching { AudioCache.putAudio(id, bytes) }
+		runCatching { audioCache.putAudio(id, bytes) }
 		return bytes
 	}
 

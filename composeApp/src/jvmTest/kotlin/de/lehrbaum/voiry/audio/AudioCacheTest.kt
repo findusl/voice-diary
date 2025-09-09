@@ -12,19 +12,19 @@ class AudioCacheTest {
 	@Test
 	fun storeAndRetrieve() {
 		val dir = Files.createTempDirectory("audioCacheTest").toString()
-		AudioCache.setBaseDirForTest(dir)
+		val cache = AudioCache(dir)
 		val id = Uuid.random()
 		val bytes = byteArrayOf(1, 2, 3)
-		AudioCache.putAudio(id, bytes)
-		val result = AudioCache.getAudio(id)
+		cache.putAudio(id, bytes)
+		val result = cache.getAudio(id)
 		assertContentEquals(bytes, result)
 	}
 
 	@Test
 	fun returnsNullWhenMissing() {
 		val dir = Files.createTempDirectory("audioCacheTestMissing").toString()
-		AudioCache.setBaseDirForTest(dir)
-		val result = AudioCache.getAudio(Uuid.random())
+		val cache = AudioCache(dir)
+		val result = cache.getAudio(Uuid.random())
 		assertNull(result)
 	}
 }

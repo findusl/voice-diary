@@ -48,10 +48,12 @@ import kotlinx.coroutines.runBlocking
 
 @OptIn(ExperimentalTime::class, ExperimentalUuidApi::class)
 class DiaryClientTest {
+	private lateinit var audioCache: AudioCache
+
 	@BeforeTest
 	fun setupLogging() {
 		initLogging()
-		AudioCache.setBaseDirForTest(Files.createTempDirectory("diaryClientTestCache").toString())
+		audioCache = AudioCache(Files.createTempDirectory("diaryClientTestCache").toString())
 	}
 
 	@Test
@@ -315,6 +317,7 @@ class DiaryClientTest {
 
 				install(SSE)
 			},
+			audioCache = audioCache,
 		)
 
 	private fun sampleEntry(id: Uuid) =

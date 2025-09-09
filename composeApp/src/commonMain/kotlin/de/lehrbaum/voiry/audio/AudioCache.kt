@@ -12,23 +12,15 @@ import kotlinx.io.readByteArray
 import kotlinx.io.write
 
 @OptIn(ExperimentalUuidApi::class)
-object AudioCache {
+class AudioCache(private val baseDir: String = voiceDiaryCacheDir()) {
 	private val fileSystem = SystemFileSystem
 
-	@Volatile
-	private var cacheDir: Path? = initCacheDir(voiceDiaryCacheDir())
+	private val cacheDir: Path? = runCatching {
+		Path(baseDir, "audio").also { fileSystem.createDirectories(it) }
+	}.onFailure { Napier.i("Audio cache disabled: ${it.message}") }.getOrNull()
 
 	val enabled: Boolean
 		get() = cacheDir != null
-
-	private fun initCacheDir(baseDir: String): Path? =
-		runCatching {
-			Path(baseDir, "audio").also { fileSystem.createDirectories(it) }
-		}.onFailure { Napier.i("Audio cache disabled: ${it.message}") }.getOrNull()
-
-	internal fun setBaseDirForTest(baseDir: String) {
-		cacheDir = initCacheDir(baseDir)
-	}
 
 	fun getAudio(id: Uuid): ByteArray? {
 		val dir = cacheDir ?: return null

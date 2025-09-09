@@ -32,6 +32,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import de.lehrbaum.voiry.api.v1.DiaryClient
+import de.lehrbaum.voiry.audio.AudioCache
 import de.lehrbaum.voiry.audio.Recorder
 import de.lehrbaum.voiry.audio.Transcriber
 import de.lehrbaum.voiry.audio.platformRecorder
@@ -46,8 +47,9 @@ fun MainScreen(
 	onRequestAudioPermission: (() -> Unit)? = null,
 	transcriber: Transcriber?,
 	onEntryClick: (UiVoiceDiaryEntry) -> Unit,
+	audioCache: AudioCache = AudioCache(),
 ) {
-	val viewModel = viewModel { MainViewModel(diaryClient, recorder, transcriber) }
+	val viewModel = viewModel { MainViewModel(diaryClient, recorder, transcriber, audioCache) }
 	val state by viewModel.uiState.collectAsStateWithLifecycle()
 	val recordClick = remember(viewModel) {
 		{
