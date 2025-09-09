@@ -23,7 +23,7 @@ appdirs = "2.0.0"
 lexilabs-basic = "+"
 kotlinx-datetime = "0.7.1-0.6.x-compat"
 buildkonfig = "0.17.1"
-kotlinx-collections-immutable = "0.3.8"
+kotlinx-collections-immutable = "0.4.0"
 
 [libraries]
 kotlin-test = { module = "org.jetbrains.kotlin:kotlin-test", version.ref = "kotlin" }
