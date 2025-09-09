@@ -5,6 +5,7 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.isDisplayed
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
@@ -74,15 +75,17 @@ class MainScreenTest {
 			onNodeWithText("Error: Connection refused").assertIsDisplayed()
 
 			client.retry()
-			waitForIdle()
 
-			onNodeWithText("Error: Still no connection", useUnmergedTree = true).assertIsDisplayed()
+			waitUntil { onNodeWithText("Error: Still no connection").isDisplayed() }
 			onAllNodesWithText("Error: Connection refused", useUnmergedTree = true).assertCountEquals(0)
 
 			client.retry()
-			waitForIdle()
 
-			onAllNodesWithText("Error: Still no connection", useUnmergedTree = true).assertCountEquals(0)
+			waitUntil {
+				onAllNodesWithText("Error: Still no connection", useUnmergedTree = true)
+					.fetchSemanticsNodes(atLeastOneRootRequired = false)
+					.isEmpty()
+			}
 		}
 
 	@Test
