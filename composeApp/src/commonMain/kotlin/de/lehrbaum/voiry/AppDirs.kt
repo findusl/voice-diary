@@ -1,3 +1,8 @@
 package de.lehrbaum.voiry
 
-expect fun voiceDiaryCacheDir(): String
+import ca.gosyer.appdirs.AppDirs
+
+fun voiceDiaryCacheDir(): String {
+	val appDirs = AppDirs { appName = "voice-diary" }
+	return appDirs.getUserCacheDir()
+}
