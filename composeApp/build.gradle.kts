@@ -36,10 +36,22 @@ kotlin {
 		@OptIn(ExperimentalKotlinGradlePluginApi::class)
 		compilerOptions {
 			jvmTarget.set(JvmTarget.JVM_11)
+			freeCompilerArgs.addAll(
+				"-P",
+				"plugin:androidx.compose.compiler.plugins.kotlin:stabilityConfigurationPath=${project.rootDir.absolutePath}/compose_compiler_config.conf",
+			)
 		}
 	}
 
-	jvm()
+	jvm {
+		@OptIn(ExperimentalKotlinGradlePluginApi::class)
+		compilerOptions {
+			freeCompilerArgs.addAll(
+				"-P",
+				"plugin:androidx.compose.compiler.plugins.kotlin:stabilityConfigurationPath=${project.rootDir.absolutePath}/compose_compiler_config.conf",
+			)
+		}
+	}
 
 	@OptIn(ExperimentalComposeLibrary::class)
 	sourceSets {
