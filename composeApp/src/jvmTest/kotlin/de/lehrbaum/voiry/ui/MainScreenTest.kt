@@ -71,18 +71,18 @@ class MainScreenTest {
 
 			waitForIdle()
 
-			onNodeWithText("Error: Connection refused", substring = false).assertIsDisplayed()
+			onNodeWithText("Error: Connection refused").assertIsDisplayed()
 
 			client.retry()
 			waitForIdle()
 
-			onNodeWithText("Error: Still no connection", substring = false).assertIsDisplayed()
-			onAllNodesWithText("Error: Connection refused", substring = false).assertCountEquals(0)
+			onNodeWithText("Error: Still no connection", useUnmergedTree = true).assertIsDisplayed()
+			onAllNodesWithText("Error: Connection refused", useUnmergedTree = true).assertCountEquals(0)
 
 			client.retry()
 			waitForIdle()
 
-			onAllNodesWithText("Error: Still no connection", substring = false).assertCountEquals(0)
+			onAllNodesWithText("Error: Still no connection", useUnmergedTree = true).assertCountEquals(0)
 		}
 
 	@Test
@@ -111,23 +111,23 @@ class MainScreenTest {
 			waitForIdle()
 
 			// Title present
-			onNodeWithText("Voice Diary", substring = false).assertIsDisplayed()
+			onNodeWithText("Voice Diary").assertIsDisplayed()
 
 			// The list contains three predefined recordings with transcripts
-			onNodeWithText("Recording 1", substring = false).assertIsDisplayed()
-			onNodeWithText("Transcript 1", substring = false).assertIsDisplayed()
-			onNodeWithText("Recording 2", substring = false).assertIsDisplayed()
-			onNodeWithText("Transcript 2", substring = false).assertIsDisplayed()
-			onNodeWithText("Recording 3", substring = false).assertIsDisplayed()
-			onNodeWithText("Transcript 3", substring = false).assertIsDisplayed()
+			onNodeWithText("Recording 1").assertIsDisplayed()
+			onNodeWithText("Transcript 1").assertIsDisplayed()
+			onNodeWithText("Recording 2").assertIsDisplayed()
+			onNodeWithText("Transcript 2").assertIsDisplayed()
+			onNodeWithText("Recording 3").assertIsDisplayed()
+			onNodeWithText("Transcript 3").assertIsDisplayed()
 
 			// FAB should be hidden when recorder is not available
-			onAllNodesWithText("Record", substring = false).assertCountEquals(0)
+			onAllNodesWithText("Record").assertCountEquals(0)
 			// Info banner can be dismissed
-			onNodeWithText("Audio recorder not available on this platform/device.", substring = false).assertIsDisplayed()
-			onNodeWithText("Dismiss", substring = false).performClick()
+			onNodeWithText("Audio recorder not available on this platform/device.").assertIsDisplayed()
+			onNodeWithText("Dismiss").performClick()
 			waitForIdle()
-			onAllNodesWithText("Audio recorder not available on this platform/device.", substring = false).assertCountEquals(0)
+			onAllNodesWithText("Audio recorder not available on this platform/device.").assertCountEquals(0)
 		}
 
 	@Test
@@ -157,23 +157,23 @@ class MainScreenTest {
 			}
 
 			// Initially we should see Record
-			onNodeWithText("Record", substring = false).assertIsDisplayed()
+			onNodeWithText("Record").assertIsDisplayed()
 
 			// Start recording
-			onNodeWithText("Record", substring = false).performClick()
+			onNodeWithText("Record").performClick()
 			waitForIdle()
-			onNodeWithText("Stop", substring = false).assertIsDisplayed()
+			onNodeWithText("Stop").assertIsDisplayed()
 
 			// Stop recording and confirm dialog
-			onNodeWithText("Stop", substring = false).performClick()
+			onNodeWithText("Stop").performClick()
 			waitForIdle()
-			onNodeWithText("Title", substring = false).performTextInput("My Entry")
-			onNodeWithText("Save", substring = false).performClick()
+			onNodeWithText("Title").performTextInput("My Entry")
+			onNodeWithText("Save").performClick()
 			waitForIdle()
-			onNodeWithText("Record", substring = false).assertIsDisplayed()
+			onNodeWithText("Record").assertIsDisplayed()
 			// New item appears at top with expected title and transcript
-			onNodeWithText("My Entry", substring = false).assertIsDisplayed()
-			onNodeWithText("Transcript for My Entry", substring = false).assertIsDisplayed()
+			onNodeWithText("My Entry").assertIsDisplayed()
+			onNodeWithText("Transcript for My Entry").assertIsDisplayed()
 		}
 
 	@Test
@@ -201,10 +201,10 @@ class MainScreenTest {
 
 			waitForIdle()
 
-			onNodeWithText("Recording 1", substring = false).assertIsDisplayed()
-			onAllNodesWithText("Delete", substring = false)[0].performClick()
+			onNodeWithText("Recording 1").assertIsDisplayed()
+			onAllNodesWithText("Delete")[0].performClick()
 			waitForIdle()
-			onAllNodesWithText("Recording 1", substring = false).assertCountEquals(0)
+			onAllNodesWithText("Recording 1").assertCountEquals(0)
 		}
 
 	@Test
@@ -240,8 +240,8 @@ class MainScreenTest {
 
 			waitForIdle()
 
-			onNodeWithText("Recording 1", substring = false).assertIsDisplayed()
-			onNodeWithText("Not yet transcribed", substring = false).assertIsDisplayed()
+			onNodeWithText("Recording 1").assertIsDisplayed()
+			onNodeWithText("Not yet transcribed").assertIsDisplayed()
 		}
 }
 

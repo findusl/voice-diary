@@ -81,16 +81,16 @@ class EntryDetailScreenTest {
 
 			waitForIdle()
 
-			onNodeWithText("Transcript 1", substring = false).assertIsDisplayed()
-			onNodeWithText("Play", substring = false).assertIsDisplayed()
-			onNodeWithText("Play", substring = false).performClick()
+			onNodeWithText("Transcript 1").assertIsDisplayed()
+			onNodeWithText("Play").assertIsDisplayed()
+			onNodeWithText("Play").performClick()
 			waitForIdle()
-			onNodeWithText("Stop", substring = false).assertIsDisplayed()
+			onNodeWithText("Stop").assertIsDisplayed()
 			verify { player.play(audio) }
-			onNodeWithText("Stop", substring = false).performClick()
+			onNodeWithText("Stop").performClick()
 			waitForIdle()
 			verify { player.stop() }
-			onNodeWithText("Play", substring = false).assertIsDisplayed()
+			onNodeWithText("Play").assertIsDisplayed()
 		}
 
 	@Test
@@ -127,18 +127,18 @@ class EntryDetailScreenTest {
 
 			waitForIdle()
 
-			onNodeWithText("Edit", substring = false).performClick()
+			onNodeWithText("Edit").performClick()
 			waitForIdle()
 
-			onNodeWithText("Save", substring = false).assertIsNotEnabled()
+			onNodeWithText("Save").assertIsNotEnabled()
 			onNode(hasSetTextAction()).performTextClearance()
-			onNodeWithText("Save", substring = false).assertIsNotEnabled()
+			onNodeWithText("Save").assertIsNotEnabled()
 			onNode(hasSetTextAction()).performTextInput("Edited")
-			onNodeWithText("Save", substring = false).assertIsEnabled()
-			onNodeWithText("Save", substring = false).performClick()
+			onNodeWithText("Save").assertIsEnabled()
+			onNodeWithText("Save").performClick()
 			waitForIdle()
 
-			onNodeWithText("Edited", substring = false).assertIsDisplayed()
+			onNodeWithText("Edited").assertIsDisplayed()
 			assert(client.lastUpdateRequest?.transcriptionText == "Edited")
 		}
 
@@ -178,7 +178,7 @@ class EntryDetailScreenTest {
 
 			waitForIdle()
 
-			onNodeWithText("Transcribe", substring = false).assertIsDisplayed()
+			onNodeWithText("Transcribe").assertIsDisplayed()
 		}
 
 	@Test
@@ -216,7 +216,7 @@ class EntryDetailScreenTest {
 
 			waitForIdle()
 
-			onNodeWithText("Delete", substring = false).performClick()
+			onNodeWithText("Delete").performClick()
 			waitForIdle()
 			assert(backCalled)
 			assert(client.entries.value.isEmpty())
@@ -257,10 +257,10 @@ class EntryDetailScreenTest {
 
 			waitForIdle()
 
-			onNodeWithText("Delete", substring = false).performClick()
+			onNodeWithText("Delete").performClick()
 			waitForIdle()
 			assert(!backCalled)
-			onNodeWithText("Error: fail delete", substring = false).assertIsDisplayed()
+			onNodeWithText("Error: fail delete").assertIsDisplayed()
 			assert(client.entries.value.isNotEmpty())
 		}
 
@@ -298,7 +298,7 @@ class EntryDetailScreenTest {
 
 			waitForIdle()
 
-			onNodeWithText("Not yet transcribed", substring = false).assertIsDisplayed()
+			onNodeWithText("Not yet transcribed").assertIsDisplayed()
 		}
 }
 

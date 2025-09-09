@@ -100,19 +100,19 @@ class NavigationViewModelTest {
 
 			waitForIdle()
 
-			onNodeWithText("Recording 1", substring = false).performClick()
+			onNodeWithText("Recording 1").performClick()
 			waitForIdle()
-			onNodeWithText("Transcript 1", substring = false).assertIsDisplayed()
+			onNodeWithText("Transcript 1").assertIsDisplayed()
 
-			onNodeWithText("Back", substring = false).performClick()
+			onNodeWithText("Back").performClick()
 			waitForIdle()
 			verify { player1.close() }
 
-			onNodeWithText("Recording 2", substring = false).performClick()
+			onNodeWithText("Recording 2").performClick()
 			waitForIdle()
-			onNodeWithText("Transcript 2", substring = false).assertIsDisplayed()
+			onNodeWithText("Transcript 2").assertIsDisplayed()
 
-			onNodeWithText("Back", substring = false).performClick()
+			onNodeWithText("Back").performClick()
 			waitForIdle()
 			verify { player2.close() }
 		}

@@ -88,10 +88,10 @@ class TranscribeButtonWithProgressTest {
 			}
 
 			waitForIdle()
-			onNodeWithText("50%", substring = false).assertIsDisplayed()
-			onNodeWithText("Recording 1", substring = false).performClick()
+			onNodeWithText("50%").assertIsDisplayed()
+			onNodeWithText("Recording 1").performClick()
 			waitForIdle()
-			onNodeWithText("50%", substring = false).assertIsDisplayed()
+			onNodeWithText("50%", useUnmergedTree = true).assertIsDisplayed()
 		}
 
 	@Test
@@ -128,10 +128,10 @@ class TranscribeButtonWithProgressTest {
 			}
 
 			waitForIdle()
-			onAllNodesWithText("Transcribe", substring = false).assertCountEquals(0)
+			onAllNodesWithText("Transcribe").assertCountEquals(0)
 			(transcriber.modelManager.modelDownloadProgress as MutableStateFlow).value = 1f
 			waitForIdle()
-			onNodeWithText("Transcribe", substring = false).assertIsDisplayed()
+			onNodeWithText("Transcribe").assertIsDisplayed()
 		}
 }
 
