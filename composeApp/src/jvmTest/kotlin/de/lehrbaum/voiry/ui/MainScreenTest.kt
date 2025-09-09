@@ -5,12 +5,14 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsDisplayed
-import androidx.compose.ui.test.isDisplayed
+import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performTextInput
 import androidx.compose.ui.test.runComposeUiTest
+import androidx.compose.ui.test.waitUntilAtLeastOneExists
+import androidx.compose.ui.test.waitUntilDoesNotExist
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.LifecycleRegistry
@@ -76,16 +78,12 @@ class MainScreenTest {
 
 			client.retry()
 
-			waitUntil { onNodeWithText("Error: Still no connection").isDisplayed() }
+			waitUntilAtLeastOneExists(hasText("Error: Still no connection"))
 			onAllNodesWithText("Error: Connection refused", useUnmergedTree = true).assertCountEquals(0)
 
 			client.retry()
 
-			waitUntil {
-				onAllNodesWithText("Error: Still no connection", useUnmergedTree = true)
-					.fetchSemanticsNodes(atLeastOneRootRequired = false)
-					.isEmpty()
-			}
+			waitUntilDoesNotExist(hasText("Error: Still no connection"))
 		}
 
 	@Test
