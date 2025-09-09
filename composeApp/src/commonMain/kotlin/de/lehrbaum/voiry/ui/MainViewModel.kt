@@ -157,6 +157,7 @@ class MainViewModel(
 }
 
 @OptIn(ExperimentalUuidApi::class)
+@Immutable
 data class MainUiState(
 	val entries: List<UiVoiceDiaryEntry> = emptyList(),
 	val isRecording: Boolean = false,
