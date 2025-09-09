@@ -17,6 +17,9 @@ import kotlin.time.Duration
 import kotlin.time.ExperimentalTime
 import kotlin.uuid.ExperimentalUuidApi
 import kotlin.uuid.Uuid
+import kotlinx.collections.immutable.PersistentList
+import kotlinx.collections.immutable.persistentListOf
+import kotlinx.collections.immutable.toPersistentList
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -38,7 +41,7 @@ class MainViewModel(
 	val uiState: StateFlow<MainUiState> =
 		combine(
 			baseState,
-			diaryClient.entries.map { entries -> entries.map { it.toUi() } },
+			diaryClient.entries.map { entries -> entries.map { it.toUi() }.toPersistentList() },
 			diaryClient.connectionError,
 		) { state, entries, error ->
 			state.copy(entries = entries, error = error)
@@ -159,7 +162,7 @@ class MainViewModel(
 @OptIn(ExperimentalUuidApi::class)
 @Immutable
 data class MainUiState(
-	val entries: List<UiVoiceDiaryEntry> = emptyList(),
+	val entries: PersistentList<UiVoiceDiaryEntry> = persistentListOf(),
 	val isRecording: Boolean = false,
 	val pendingRecording: Recording? = null,
 	val pendingTitle: String = "",

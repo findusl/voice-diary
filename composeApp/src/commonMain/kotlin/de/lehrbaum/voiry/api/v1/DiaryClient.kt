@@ -28,6 +28,9 @@ import io.ktor.utils.io.CancellationException
 import kotlin.time.ExperimentalTime
 import kotlin.uuid.ExperimentalUuidApi
 import kotlin.uuid.Uuid
+import kotlinx.collections.immutable.PersistentList
+import kotlinx.collections.immutable.persistentListOf
+import kotlinx.collections.immutable.toPersistentList
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -68,7 +71,7 @@ open class DiaryClient(
 		Napier.d("Created DiaryClient for $baseUrl")
 	}
 
-	open val entries: StateFlow<List<VoiceDiaryEntry>> = flow {
+	open val entries: StateFlow<PersistentList<VoiceDiaryEntry>> = flow {
 		var retryDelayMillis = 1_000L
 		while (currentCoroutineContext().isActive) {
 			try {
@@ -93,8 +96,8 @@ open class DiaryClient(
 				retryDelayMillis = (retryDelayMillis * 2).coerceAtMost(60_000L)
 			}
 		}
-	}.runningFold(emptyList<VoiceDiaryEntry>()) { list, event -> applyEvent(list, event) }
-		.stateIn(scope, SharingStarted.WhileSubscribed(), emptyList())
+	}.runningFold(persistentListOf<VoiceDiaryEntry>()) { list, event -> applyEvent(list, event) }
+		.stateIn(scope, SharingStarted.WhileSubscribed(), persistentListOf())
 
 	private val entryFlows = mutableMapOf<Uuid, StateFlow<VoiceDiaryEntry?>>()
 
@@ -183,23 +186,24 @@ open class DiaryClient(
 		}
 	}
 
-	private fun applyEvent(list: List<VoiceDiaryEntry>, event: DiaryEvent): List<VoiceDiaryEntry> =
+	private fun applyEvent(list: PersistentList<VoiceDiaryEntry>, event: DiaryEvent): PersistentList<VoiceDiaryEntry> =
 		when (event) {
-			is DiaryEvent.EntriesSnapshot -> event.entries
+			is DiaryEvent.EntriesSnapshot -> event.entries.toPersistentList()
 			is DiaryEvent.EntryCreated ->
-				if (list.any { it.id == event.entry.id }) list else list + event.entry
-			is DiaryEvent.EntryDeleted -> list.filterNot { it.id == event.id }
+				if (list.any { it.id == event.entry.id }) list else list.add(event.entry)
+			is DiaryEvent.EntryDeleted -> list.filterNot { it.id == event.id }.toPersistentList()
 			is DiaryEvent.TranscriptionUpdated ->
-				list.map { entry ->
-					if (entry.id == event.id) {
-						entry.copy(
-							transcriptionText = event.transcriptionText,
-							transcriptionStatus = event.transcriptionStatus,
-							transcriptionUpdatedAt = event.transcriptionUpdatedAt,
-						)
-					} else {
-						entry
-					}
-				}
+				list
+					.map { entry ->
+						if (entry.id == event.id) {
+							entry.copy(
+								transcriptionText = event.transcriptionText,
+								transcriptionStatus = event.transcriptionStatus,
+								transcriptionUpdatedAt = event.transcriptionUpdatedAt,
+							)
+						} else {
+							entry
+						}
+					}.toPersistentList()
 		}
 }
