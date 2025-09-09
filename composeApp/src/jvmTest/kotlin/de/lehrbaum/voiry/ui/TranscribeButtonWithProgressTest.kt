@@ -8,11 +8,12 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.assertCountEquals
-import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.runComposeUiTest
+import androidx.compose.ui.test.waitUntilAtLeastOneExists
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.LifecycleRegistry
@@ -87,11 +88,9 @@ class TranscribeButtonWithProgressTest {
 				}
 			}
 
-			waitForIdle()
-			onNodeWithText("50%").assertIsDisplayed()
+			waitUntilAtLeastOneExists(hasText("50%"))
 			onNodeWithText("Recording 1").performClick()
-			waitForIdle()
-			onNodeWithText("50%", useUnmergedTree = true).assertIsDisplayed()
+			waitUntilAtLeastOneExists(hasText("50%"))
 		}
 
 	@Test
@@ -127,11 +126,10 @@ class TranscribeButtonWithProgressTest {
 				}
 			}
 
-			waitForIdle()
+			waitUntilAtLeastOneExists(hasText("Recording 1"))
 			onAllNodesWithText("Transcribe").assertCountEquals(0)
 			(transcriber.modelManager.modelDownloadProgress as MutableStateFlow).value = 1f
-			waitForIdle()
-			onNodeWithText("Transcribe").assertIsDisplayed()
+			waitUntilAtLeastOneExists(hasText("Transcribe"))
 		}
 }
 

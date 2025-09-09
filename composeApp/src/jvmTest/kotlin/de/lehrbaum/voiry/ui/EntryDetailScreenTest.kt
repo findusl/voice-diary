@@ -5,13 +5,16 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsEnabled
-import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.hasSetTextAction
+import androidx.compose.ui.test.hasText
+import androidx.compose.ui.test.isNotEnabled
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performTextClearance
 import androidx.compose.ui.test.performTextInput
 import androidx.compose.ui.test.runComposeUiTest
+import androidx.compose.ui.test.waitUntilAtLeastOneExists
+import androidx.compose.ui.test.waitUntilDoesNotExist
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.LifecycleRegistry
@@ -79,18 +82,15 @@ class EntryDetailScreenTest {
 				}
 			}
 
-			waitForIdle()
+			waitUntilAtLeastOneExists(hasText("Transcript 1"))
 
-			onNodeWithText("Transcript 1").assertIsDisplayed()
 			onNodeWithText("Play").assertIsDisplayed()
 			onNodeWithText("Play").performClick()
-			waitForIdle()
-			onNodeWithText("Stop").assertIsDisplayed()
+			waitUntilAtLeastOneExists(hasText("Stop"))
 			verify { player.play(audio) }
 			onNodeWithText("Stop").performClick()
-			waitForIdle()
+			waitUntilAtLeastOneExists(hasText("Play"))
 			verify { player.stop() }
-			onNodeWithText("Play").assertIsDisplayed()
 		}
 
 	@Test
@@ -125,20 +125,17 @@ class EntryDetailScreenTest {
 				}
 			}
 
-			waitForIdle()
+			waitUntilAtLeastOneExists(hasText("Edit"))
 
 			onNodeWithText("Edit").performClick()
-			waitForIdle()
+			waitUntilAtLeastOneExists(hasText("Save") and isNotEnabled())
 
-			onNodeWithText("Save").assertIsNotEnabled()
-			onNode(hasSetTextAction()).performTextClearance()
-			onNodeWithText("Save").assertIsNotEnabled()
+			onNodeWithText("Transcript 1").performTextClearance()
+			waitUntilAtLeastOneExists(hasText("Save") and isNotEnabled())
 			onNode(hasSetTextAction()).performTextInput("Edited")
 			onNodeWithText("Save").assertIsEnabled()
 			onNodeWithText("Save").performClick()
-			waitForIdle()
-
-			onNodeWithText("Edited").assertIsDisplayed()
+			waitUntilAtLeastOneExists(hasText("Edited"))
 			assert(client.lastUpdateRequest?.transcriptionText == "Edited")
 		}
 
@@ -176,9 +173,7 @@ class EntryDetailScreenTest {
 				}
 			}
 
-			waitForIdle()
-
-			onNodeWithText("Transcribe").assertIsDisplayed()
+			waitUntilAtLeastOneExists(hasText("Transcribe"))
 		}
 
 	@Test
@@ -214,10 +209,10 @@ class EntryDetailScreenTest {
 				}
 			}
 
-			waitForIdle()
+			waitUntilAtLeastOneExists(hasText("Delete"))
 
 			onNodeWithText("Delete").performClick()
-			waitForIdle()
+			waitUntilDoesNotExist(hasText("Delete"))
 			assert(backCalled)
 			assert(client.entries.value.isEmpty())
 		}
@@ -255,12 +250,11 @@ class EntryDetailScreenTest {
 				}
 			}
 
-			waitForIdle()
+			waitUntilAtLeastOneExists(hasText("Delete"))
 
 			onNodeWithText("Delete").performClick()
-			waitForIdle()
+			waitUntilAtLeastOneExists(hasText("Error: fail delete"))
 			assert(!backCalled)
-			onNodeWithText("Error: fail delete").assertIsDisplayed()
 			assert(client.entries.value.isNotEmpty())
 		}
 
@@ -296,9 +290,7 @@ class EntryDetailScreenTest {
 				}
 			}
 
-			waitForIdle()
-
-			onNodeWithText("Not yet transcribed").assertIsDisplayed()
+			waitUntilAtLeastOneExists(hasText("Not yet transcribed"))
 		}
 }
 
