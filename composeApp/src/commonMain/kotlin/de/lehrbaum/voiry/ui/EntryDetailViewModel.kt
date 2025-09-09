@@ -1,5 +1,6 @@
 package de.lehrbaum.voiry.ui
 
+import androidx.compose.runtime.Immutable
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import de.lehrbaum.voiry.api.v1.DiaryClient
@@ -129,8 +130,12 @@ class EntryDetailViewModel(
 	}
 }
 
+@Immutable
 data class EntryDetailUiState(
 	val entry: VoiceDiaryEntry? = null,
+	/**
+	 * Audio data must not be mutated; the ByteArray is treated as immutable by convention.
+	 */
 	val audio: ByteArray? = null,
 	val isPlaying: Boolean = false,
 	val error: String? = null,
