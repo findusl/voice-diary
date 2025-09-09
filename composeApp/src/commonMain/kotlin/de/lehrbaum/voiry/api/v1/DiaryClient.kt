@@ -151,14 +151,7 @@ open class DiaryClient(
 			header(HttpHeaders.ContentType, ContentType.Application.Json.toString())
 			setBody(request)
 		}
-		if (!response.status.isSuccess()) {
-			val text = response.bodyAsText()
-			if (response.status.value in 400..499) {
-				throw ClientRequestException(response, text)
-			} else {
-				throw ServerResponseException(response, text)
-			}
-		}
+		throwIfFailed(response)
 	}
 
 	open suspend fun deleteEntry(id: Uuid) {
