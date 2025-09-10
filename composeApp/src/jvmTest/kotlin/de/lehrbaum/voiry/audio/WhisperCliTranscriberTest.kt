@@ -11,18 +11,23 @@ import kotlinx.io.writeString
 
 class WhisperCliTranscriberTest {
 	@Test
-	fun `invokes whisper-cli with temp file and parses json`() =
+	fun `invokes whisper-cli with language detection and parses json`() =
 		runBlocking {
-			var capturedCommand: List<String>? = null
-			val runner: (List<String>) -> Int = { command ->
-				capturedCommand = command
-				val fileIndex = command.indexOf("--file") + 1
-				val wavPath = command[fileIndex]
-				File("$wavPath.json").writeText(
-					"{" +
-						"\"transcription\":[{\"text\":\"Hello\"},{\"text\":\"World\"}]}",
-				)
-				0
+			val commands = mutableListOf<List<String>>()
+			val runner: (List<String>) -> ProcessResult = { command ->
+				commands += command
+				when {
+					command.contains("--detect-language") -> ProcessResult(0, "detected language: en")
+					else -> {
+						val fileIndex = command.indexOf("--file") + 1
+						val wavPath = command[fileIndex]
+						File("$wavPath.json").writeText(
+							"{" +
+								"\"transcription\":[{\"text\":\"Hello\"},{\"text\":\"World\"}]}",
+						)
+						ProcessResult(0, "")
+					}
+				}
 			}
 			val model = Files.createTempFile("model", ".bin")
 			val manager = WhisperModelManager(model, model.toUri().toURL())
@@ -31,9 +36,11 @@ class WhisperCliTranscriberTest {
 			val buffer = Buffer().apply { writeString("dummy") }
 			val transcript = transcriber.transcribe(buffer)
 			assertEquals("Hello World", transcript)
-			val cmd = capturedCommand ?: error("command not captured")
+			assertTrue(commands[0].contains("--detect-language"))
+			val cmd = commands[1]
 			assertTrue(cmd.contains("--file"))
 			val path = cmd[cmd.indexOf("--file") + 1]
 			assertTrue(path.endsWith(".wav"))
+			assertTrue(cmd.containsAll(listOf("--language", "en")))
 		}
 }
