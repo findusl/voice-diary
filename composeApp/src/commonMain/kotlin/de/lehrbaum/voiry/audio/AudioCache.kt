@@ -25,8 +25,8 @@ class AudioCache(private val baseDir: String = voiceDiaryCacheDir()) {
 	fun getAudio(id: Uuid): ByteArray? {
 		val dir = cacheDir ?: return null
 		val path = Path(dir, "$id.wav")
+		if (!fileSystem.exists(path)) return null
 		return runCatching {
-			if (!fileSystem.exists(path)) return null
 			fileSystem.source(path).buffered().use { it.readByteArray() }
 		}.onFailure { Napier.i("Cache read failed: ${it.message}") }.getOrNull()
 	}

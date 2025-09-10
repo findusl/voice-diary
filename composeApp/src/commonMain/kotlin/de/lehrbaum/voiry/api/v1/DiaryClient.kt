@@ -176,7 +176,7 @@ open class DiaryClient(
 		val response = httpClient.get("$baseUrl/v1/entries/$id/audio")
 		throwIfFailed(response)
 		val bytes: ByteArray = response.body()
-		runCatching { audioCache.putAudio(id, bytes) }
+		audioCache.putAudio(id, bytes)
 		return bytes
 	}
 

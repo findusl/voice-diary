@@ -25,7 +25,6 @@ import de.lehrbaum.voiry.UiTest
 import de.lehrbaum.voiry.api.v1.DiaryClient
 import de.lehrbaum.voiry.api.v1.TranscriptionStatus
 import de.lehrbaum.voiry.api.v1.VoiceDiaryEntry
-import de.lehrbaum.voiry.audio.AudioCache
 import de.lehrbaum.voiry.audio.ModelDownloader
 import de.lehrbaum.voiry.audio.Recorder
 import de.lehrbaum.voiry.audio.Transcriber
@@ -33,7 +32,6 @@ import dev.mokkery.answering.returns
 import dev.mokkery.every
 import dev.mokkery.mock
 import io.ktor.client.HttpClient
-import java.nio.file.Files
 import kotlin.time.Clock
 import kotlin.time.Duration
 import kotlin.time.ExperimentalTime
@@ -80,7 +78,6 @@ class TranscribeButtonWithProgressTest {
 								recorder = recorder,
 								transcriber = transcriber,
 								onEntryClick = { entry -> entryId = entry.id },
-								audioCache = AudioCache(Files.createTempDirectory("transcribeProgress1").toString()),
 							)
 						} else {
 							EntryDetailScreen(
@@ -127,7 +124,6 @@ class TranscribeButtonWithProgressTest {
 							recorder = recorder,
 							transcriber = transcriber,
 							onEntryClick = {},
-							audioCache = AudioCache(Files.createTempDirectory("transcribeProgress2").toString()),
 						)
 					}
 				}

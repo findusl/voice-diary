@@ -36,6 +36,7 @@ import de.lehrbaum.voiry.audio.AudioCache
 import de.lehrbaum.voiry.audio.Recorder
 import de.lehrbaum.voiry.audio.Transcriber
 import de.lehrbaum.voiry.audio.platformRecorder
+import de.lehrbaum.voiry.audio.tempCacheDir
 import kotlin.time.ExperimentalTime
 import kotlin.uuid.ExperimentalUuidApi
 
@@ -47,9 +48,10 @@ fun MainScreen(
 	onRequestAudioPermission: (() -> Unit)? = null,
 	transcriber: Transcriber?,
 	onEntryClick: (UiVoiceDiaryEntry) -> Unit,
-	audioCache: AudioCache = AudioCache(),
+	audioCache: AudioCache? = null,
 ) {
-	val viewModel = viewModel { MainViewModel(diaryClient, recorder, transcriber, audioCache) }
+	val cache = remember { audioCache ?: AudioCache(tempCacheDir()) }
+	val viewModel = viewModel { MainViewModel(diaryClient, recorder, transcriber, cache) }
 	val state by viewModel.uiState.collectAsStateWithLifecycle()
 	val recordClick = remember(viewModel) {
 		{

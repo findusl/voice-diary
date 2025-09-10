@@ -24,13 +24,11 @@ import de.lehrbaum.voiry.UiTest
 import de.lehrbaum.voiry.api.v1.DiaryClient
 import de.lehrbaum.voiry.api.v1.TranscriptionStatus
 import de.lehrbaum.voiry.api.v1.VoiceDiaryEntry
-import de.lehrbaum.voiry.audio.AudioCache
 import de.lehrbaum.voiry.audio.Recorder
 import dev.mokkery.answering.returns
 import dev.mokkery.every
 import dev.mokkery.mock
 import io.ktor.client.HttpClient
-import java.nio.file.Files
 import kotlin.time.Clock
 import kotlin.time.Duration
 import kotlin.time.ExperimentalTime
@@ -71,7 +69,6 @@ class MainScreenTest {
 							recorder = recorder,
 							transcriber = null,
 							onEntryClick = { },
-							audioCache = AudioCache(Files.createTempDirectory("mainScreenTest1").toString()),
 						)
 					}
 				}
@@ -107,7 +104,6 @@ class MainScreenTest {
 							recorder = unavailableRecorder,
 							transcriber = null,
 							onEntryClick = { },
-							audioCache = AudioCache(Files.createTempDirectory("mainScreenTest2").toString()),
 						)
 					}
 				}
@@ -154,7 +150,6 @@ class MainScreenTest {
 							recorder = recorder,
 							transcriber = null,
 							onEntryClick = { },
-							audioCache = AudioCache(Files.createTempDirectory("mainScreenTest3").toString()),
 						)
 					}
 				}
@@ -196,7 +191,6 @@ class MainScreenTest {
 							recorder = recorder,
 							transcriber = null,
 							onEntryClick = { },
-							audioCache = AudioCache(Files.createTempDirectory("mainScreenTest4").toString()),
 						)
 					}
 				}
@@ -234,7 +228,6 @@ class MainScreenTest {
 							recorder = recorder,
 							transcriber = null,
 							onEntryClick = { },
-							audioCache = AudioCache(Files.createTempDirectory("mainScreenTest5").toString()),
 						)
 					}
 				}
