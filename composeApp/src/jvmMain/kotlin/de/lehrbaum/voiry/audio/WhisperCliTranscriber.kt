@@ -10,13 +10,18 @@ import kotlinx.io.readByteArray
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 
+data class ProcessResult(val exitCode: Int, val output: String)
+
 private const val TAG = "WhisperCliTranscriber"
 
 /** Desktop transcriber backed by the `whisper-cli` executable. */
 class WhisperCliTranscriber(
 	override val modelManager: WhisperModelManager = WhisperModelManager(),
-	private val processRunner: (List<String>) -> Int = { command ->
-		ProcessBuilder(command).start().waitFor()
+	private val processRunner: (List<String>) -> ProcessResult = { command ->
+		val process = ProcessBuilder(command).redirectErrorStream(true).start()
+		val output = process.inputStream.bufferedReader().readText()
+		val exit = process.waitFor()
+		ProcessResult(exit, output)
 	},
 ) : Transcriber {
 	override suspend fun initialize() {
@@ -30,25 +35,50 @@ class WhisperCliTranscriber(
 			try {
 				tmp.writeBytes(buffer.readByteArray())
 
+				val detectCommand = listOf(
+					"whisper-cli",
+					"--model",
+					modelManager.modelPath.toString(),
+					"--file",
+					tmp.absolutePath,
+					"--detect-language",
+				)
+				Napier.d("Running: ${detectCommand.joinToString(" ")}", tag = TAG)
+				val detectResult = processRunner(detectCommand)
+				val detected = parseLanguage(detectResult.output)
+				val language = when (detected) {
+					"de" -> "de"
+					else -> "en"
+				}
+				if (detectResult.exitCode != 0) {
+					Napier.e(
+						"whisper-cli exited ${detectResult.exitCode}: ${detectCommand.joinToString(" ")}",
+						tag = TAG,
+					)
+					throw RuntimeException("whisper-cli failed with exit code ${detectResult.exitCode}")
+				}
+
 				val command = listOf(
 					"whisper-cli",
 					"--model",
 					modelManager.modelPath.toString(),
 					"--file",
 					tmp.absolutePath,
+					"--language",
+					language,
 					"--output-json",
 				)
 				Napier.d("Running: ${command.joinToString(" ")}", tag = TAG)
 				val exit = processRunner(command)
-				if (exit != 0) {
+				if (exit.exitCode != 0) {
 					Napier.e(
-						"whisper-cli exited $exit: ${command.joinToString(" ")}",
+						"whisper-cli exited ${exit.exitCode}: ${command.joinToString(" ")}",
 						tag = TAG,
 					)
-					throw RuntimeException("whisper-cli failed with exit code $exit")
+					throw RuntimeException("whisper-cli failed with exit code ${exit.exitCode}")
 				} else {
 					Napier.i(
-						"whisper-cli exited $exit: ${command.joinToString(" ")}",
+						"whisper-cli exited ${exit.exitCode}: ${command.joinToString(" ")}",
 						tag = TAG,
 					)
 				}
@@ -69,4 +99,9 @@ class WhisperCliTranscriber(
 
 	@Serializable
 	private data class Segment(val text: String)
+
+	private fun parseLanguage(output: String): String? {
+		val regex = Regex("language:\\s*([a-zA-Z-]+)")
+		return regex.find(output)?.groupValues?.get(1)
+	}
 }
