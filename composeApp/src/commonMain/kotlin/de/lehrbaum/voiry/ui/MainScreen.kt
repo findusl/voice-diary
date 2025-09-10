@@ -46,8 +46,9 @@ fun MainScreen(
 	onRequestAudioPermission: (() -> Unit)? = null,
 	transcriber: Transcriber?,
 	onEntryClick: (UiVoiceDiaryEntry) -> Unit,
+	cacheAvailable: Boolean = true,
 ) {
-	val viewModel = viewModel { MainViewModel(diaryClient, recorder, transcriber) }
+	val viewModel = viewModel { MainViewModel(diaryClient, recorder, transcriber, cacheAvailable) }
 	val state by viewModel.uiState.collectAsStateWithLifecycle()
 	val recordClick = remember(viewModel) {
 		{
@@ -76,6 +77,13 @@ fun MainScreen(
 					text = "Audio recorder not available on this platform/device.",
 					actionLabel = "Dismiss",
 					onAction = { viewModel.dismissRecorderUnavailable() },
+				)
+			}
+			if (state.cacheUnavailable && !state.cacheUnavailableDismissed) {
+				InfoBanner(
+					text = "Audio cache unavailable; recordings won't be stored locally.",
+					actionLabel = "Dismiss",
+					onAction = { viewModel.dismissCacheUnavailable() },
 				)
 			}
 			if (state.error != null) {

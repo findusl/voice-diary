@@ -10,6 +10,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import de.lehrbaum.voiry.BuildKonfig
 import de.lehrbaum.voiry.api.v1.DiaryClient
+import de.lehrbaum.voiry.audio.AudioCache
 import de.lehrbaum.voiry.audio.Transcriber
 import de.lehrbaum.voiry.audio.platformTranscriber
 import de.lehrbaum.voiry.ui.EntryDetailScreen
@@ -24,7 +25,8 @@ import org.jetbrains.compose.ui.tooling.preview.Preview
 @Composable
 @Preview
 fun App(baseUrl: String = BuildKonfig.BACKEND_URL, onRequestAudioPermission: (() -> Unit)? = null) {
-	val diaryClient = remember { DiaryClient(baseUrl) }
+	val audioCache = remember { AudioCache() }
+	val diaryClient = remember { DiaryClient(baseUrl, audioCache = audioCache) }
 	val transcriber: Transcriber? = remember { platformTranscriber }
 	LaunchedEffect(transcriber) { transcriber?.initialize() }
 	var selectedEntryId by remember { mutableStateOf<Uuid?>(null) }
@@ -45,6 +47,7 @@ fun App(baseUrl: String = BuildKonfig.BACKEND_URL, onRequestAudioPermission: (()
 				onRequestAudioPermission = onRequestAudioPermission,
 				transcriber = transcriber,
 				onEntryClick = onEntryClick,
+				cacheAvailable = audioCache.enabled,
 			)
 		} else {
 			EntryDetailScreen(

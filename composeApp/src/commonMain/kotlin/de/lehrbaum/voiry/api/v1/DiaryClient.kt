@@ -1,6 +1,7 @@
 package de.lehrbaum.voiry.api.v1
 
 import androidx.compose.runtime.Stable
+import de.lehrbaum.voiry.audio.AudioCache
 import io.github.aakira.napier.Napier
 import io.ktor.client.HttpClient
 import io.ktor.client.call.body
@@ -62,6 +63,7 @@ open class DiaryClient(
 		install(ContentNegotiation) { json() }
 		install(SSE)
 	},
+	private val audioCache: AudioCache = AudioCache(),
 ) : AutoCloseable {
 	private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
 	protected val connectionErrorState = MutableStateFlow<String?>(null)
@@ -143,6 +145,7 @@ open class DiaryClient(
 				setBody(MultiPartFormDataContent(parts))
 			}
 			throwIfFailed(response)
+			audioCache.putAudio(entry.id, audio)
 			return response.body()
 		} finally {
 			parts.forEach { it.dispose() }
@@ -170,9 +173,12 @@ open class DiaryClient(
 	}
 
 	open suspend fun getAudio(id: Uuid): ByteArray {
+		audioCache.getAudio(id)?.let { return it }
 		val response = httpClient.get("$baseUrl/v1/entries/$id/audio")
 		throwIfFailed(response)
-		return response.body()
+		val bytes: ByteArray = response.body()
+		audioCache.putAudio(id, bytes)
+		return bytes
 	}
 
 	private suspend fun throwIfFailed(response: HttpResponse) {

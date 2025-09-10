@@ -23,7 +23,11 @@ private const val TAG = "WhisperModelManager"
 
 /** Handles the Whisper model file and cleans up partial downloads. */
 class WhisperModelManager(
-	val modelPath: Path = voiceDiaryDataDir().resolve("whisper-models/ggml-large-v3-turbo.bin"),
+	val modelPath: Path = Path.of(
+		voiceDiaryDataDir(),
+		"whisper-models",
+		"ggml-large-v3-turbo.bin",
+	),
 	private val modelUrl: URL = MODEL_URL,
 ) : ModelDownloader {
 	private var initialized = false

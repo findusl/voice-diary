@@ -3,6 +3,7 @@ package de.lehrbaum.voiry.api.v1
 import de.lehrbaum.voiry.DiaryRepository
 import de.lehrbaum.voiry.DiaryService
 import de.lehrbaum.voiry.DiaryServiceImpl
+import de.lehrbaum.voiry.audio.AudioCache
 import de.lehrbaum.voiry.initLogging
 import de.lehrbaum.voiry.module
 import dev.mokkery.answering.calls
@@ -15,7 +16,9 @@ import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
 import io.ktor.client.plugins.sse.SSE
 import io.ktor.http.HttpStatusCode
 import io.ktor.serialization.kotlinx.json.json
+import io.ktor.server.application.install
 import io.ktor.server.response.respond
+import io.ktor.server.response.respondBytes
 import io.ktor.server.routing.delete
 import io.ktor.server.routing.get
 import io.ktor.server.routing.post
@@ -43,12 +46,16 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.runBlocking
+import io.ktor.server.plugins.contentnegotiation.ContentNegotiation as ServerContentNegotiation
 
 @OptIn(ExperimentalTime::class, ExperimentalUuidApi::class)
 class DiaryClientTest {
+	private lateinit var audioCache: AudioCache
+
 	@BeforeTest
 	fun setupLogging() {
 		initLogging()
+		audioCache = AudioCache(Files.createTempDirectory("diaryClientTestCache").toString())
 	}
 
 	@Test
@@ -111,6 +118,23 @@ class DiaryClientTest {
 				val entry = sampleEntry(Uuid.random())
 				val result = runBlocking { client.createEntry(entry, ByteArray(0)) }
 				assertEquals(entry, result)
+			}
+		}
+
+	@Test
+	fun `create entry caches audio`() =
+		testApplication {
+			val entry = sampleEntry(Uuid.random())
+			application {
+				install(ServerContentNegotiation) { json() }
+				routing {
+					post("/v1/entries") { call.respond(entry) }
+				}
+			}
+			createDiaryClientAgainstMockKtorApplication().use { client: DiaryClient ->
+				val audio = byteArrayOf(7, 8, 9)
+				runBlocking { client.createEntry(entry, audio) }
+				assertContentEquals(audio, audioCache.getAudio(entry.id))
 			}
 		}
 
@@ -252,6 +276,29 @@ class DiaryClientTest {
 		}
 
 	@Test
+	fun `get audio cached`() =
+		testApplication {
+			val audio = byteArrayOf(4, 5, 6)
+			var callCount = 0
+			application {
+				routing {
+					get("/v1/entries/{id}/audio") {
+						callCount++
+						call.respondBytes(audio)
+					}
+				}
+			}
+			createDiaryClientAgainstMockKtorApplication().use { client: DiaryClient ->
+				val id = Uuid.random()
+				val first = runBlocking { client.getAudio(id) }
+				val second = runBlocking { client.getAudio(id) }
+				assertContentEquals(audio, first)
+				assertContentEquals(audio, second)
+				assertEquals(1, callCount)
+			}
+		}
+
+	@Test
 	fun `get audio 404`() =
 		testApplication {
 			application {
@@ -289,6 +336,7 @@ class DiaryClientTest {
 
 				install(SSE)
 			},
+			audioCache = audioCache,
 		)
 
 	private fun sampleEntry(id: Uuid) =

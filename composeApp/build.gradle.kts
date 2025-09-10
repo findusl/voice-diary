@@ -67,6 +67,7 @@ kotlin {
 			implementation(libs.lexilabs.basic.sound)
 			implementation(libs.kotlinx.datetime)
 			implementation(libs.kotlinx.collections.immutable)
+			implementation(libs.appdirs)
 		}
 		commonTest.dependencies {
 			implementation(libs.kotlin.test)
@@ -74,7 +75,6 @@ kotlin {
 		jvmMain.dependencies {
 			implementation(compose.desktop.currentOs)
 			implementation(libs.kotlinx.coroutinesSwing)
-			implementation(libs.appdirs)
 		}
 		jvmTest.dependencies {
 			implementation(compose.uiTest)
