@@ -36,8 +36,14 @@ class MainViewModel(
 	private val diaryClient: DiaryClient,
 	private val recorder: Recorder = platformRecorder,
 	private val transcriber: Transcriber?,
+	cacheAvailable: Boolean = true,
 ) : ViewModel(), Closeable {
-	private val baseState = MutableStateFlow(MainUiState(recorderAvailable = recorder.isAvailable))
+	private val baseState = MutableStateFlow(
+		MainUiState(
+			recorderAvailable = recorder.isAvailable,
+			cacheUnavailable = !cacheAvailable,
+		),
+	)
 	val uiState: StateFlow<MainUiState> =
 		combine(
 			baseState,
@@ -93,6 +99,10 @@ class MainViewModel(
 
 	fun dismissRecorderUnavailable() {
 		baseState.update { it.copy(recorderUnavailableDismissed = true) }
+	}
+
+	fun dismissCacheUnavailable() {
+		baseState.update { it.copy(cacheUnavailableDismissed = true) }
 	}
 
 	fun updatePendingTitle(title: String) {
@@ -169,6 +179,8 @@ data class MainUiState(
 	val error: String? = null,
 	val recorderAvailable: Boolean = true,
 	val recorderUnavailableDismissed: Boolean = false,
+	val cacheUnavailable: Boolean = false,
+	val cacheUnavailableDismissed: Boolean = false,
 )
 
 @Immutable
