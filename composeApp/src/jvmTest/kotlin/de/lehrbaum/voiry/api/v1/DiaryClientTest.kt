@@ -13,6 +13,8 @@ import dev.mokkery.mock
 import io.ktor.client.plugins.ClientRequestException
 import io.ktor.client.plugins.ServerResponseException
 import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
+import io.ktor.server.plugins.contentnegotiation.ContentNegotiation as ServerContentNegotiation
+import io.ktor.server.application.install
 import io.ktor.client.plugins.sse.SSE
 import io.ktor.http.HttpStatusCode
 import io.ktor.serialization.kotlinx.json.json
@@ -116,6 +118,23 @@ class DiaryClientTest {
 				val entry = sampleEntry(Uuid.random())
 				val result = runBlocking { client.createEntry(entry, ByteArray(0)) }
 				assertEquals(entry, result)
+			}
+		}
+
+	@Test
+	fun `create entry caches audio`() =
+		testApplication {
+			val entry = sampleEntry(Uuid.random())
+                        application {
+                                install(ServerContentNegotiation) { json() }
+                                routing {
+                                        post("/v1/entries") { call.respond(entry) }
+                                }
+                        }
+			createDiaryClientAgainstMockKtorApplication().use { client: DiaryClient ->
+				val audio = byteArrayOf(7, 8, 9)
+				runBlocking { client.createEntry(entry, audio) }
+				assertContentEquals(audio, audioCache.getAudio(entry.id))
 			}
 		}
 

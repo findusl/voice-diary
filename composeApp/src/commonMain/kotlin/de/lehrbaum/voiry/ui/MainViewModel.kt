@@ -7,7 +7,6 @@ import de.lehrbaum.voiry.api.v1.DiaryClient
 import de.lehrbaum.voiry.api.v1.TranscriptionStatus
 import de.lehrbaum.voiry.api.v1.UpdateTranscriptionRequest
 import de.lehrbaum.voiry.api.v1.VoiceDiaryEntry
-import de.lehrbaum.voiry.audio.AudioCache
 import de.lehrbaum.voiry.audio.Recorder
 import de.lehrbaum.voiry.audio.Transcriber
 import de.lehrbaum.voiry.audio.platformRecorder
@@ -37,12 +36,12 @@ class MainViewModel(
 	private val diaryClient: DiaryClient,
 	private val recorder: Recorder = platformRecorder,
 	private val transcriber: Transcriber?,
-	private val audioCache: AudioCache = AudioCache(),
+	cacheAvailable: Boolean = true,
 ) : ViewModel(), Closeable {
 	private val baseState = MutableStateFlow(
 		MainUiState(
 			recorderAvailable = recorder.isAvailable,
-			cacheUnavailable = !audioCache.enabled,
+			cacheUnavailable = !cacheAvailable,
 		),
 	)
 	val uiState: StateFlow<MainUiState> =
@@ -127,7 +126,6 @@ class MainViewModel(
 			)
 			runCatching { diaryClient.createEntry(entry, bytes) }
 				.onFailure { e -> baseState.update { it.copy(error = e.message) } }
-			runCatching { audioCache.putAudio(entry.id, bytes) }
 			baseState.update { it.copy(pendingRecording = null, pendingTitle = "") }
 		}
 	}

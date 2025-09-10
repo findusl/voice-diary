@@ -47,7 +47,7 @@ fun App(baseUrl: String = BuildKonfig.BACKEND_URL, onRequestAudioPermission: (()
 				onRequestAudioPermission = onRequestAudioPermission,
 				transcriber = transcriber,
 				onEntryClick = onEntryClick,
-				audioCache = audioCache,
+				cacheAvailable = audioCache.enabled,
 			)
 		} else {
 			EntryDetailScreen(

@@ -145,6 +145,7 @@ open class DiaryClient(
 				setBody(MultiPartFormDataContent(parts))
 			}
 			throwIfFailed(response)
+			audioCache.putAudio(entry.id, audio)
 			return response.body()
 		} finally {
 			parts.forEach { it.dispose() }
