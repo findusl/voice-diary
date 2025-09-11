@@ -13,30 +13,27 @@ import kotlin.test.assertEquals
 import kotlin.time.ExperimentalTime
 import kotlin.uuid.ExperimentalUuidApi
 import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.test.runTest
 import kotlinx.serialization.json.Json
 
 @OptIn(ExperimentalTime::class, ExperimentalUuidApi::class)
 class ServerTest {
 	@Test
 	fun `sse emits snapshot and updates`() =
-		runTest {
+		testApplication {
 			val service = DiaryServiceImpl.create(DiaryRepository(Files.createTempDirectory("serverTest")))
-			testApplication {
-				application { module(service) }
+			application { module(service) }
 
-				val client = createClient {
-					install(ContentNegotiation) { json() }
-					install(SSE)
-				}
-
-				val events = mutableListOf<DiaryEvent>()
-				client.sse("/v1/entries") {
-					val event: ServerSentEvent = incoming.first()
-					events += Json.decodeFromString(DiaryEvent.serializer(), event.data!!)
-				}
-
-				assertEquals(listOf<DiaryEvent>(DiaryEvent.EntriesSnapshot(emptyList())), events)
+			val client = createClient {
+				install(ContentNegotiation) { json() }
+				install(SSE)
 			}
+
+			val events = mutableListOf<DiaryEvent>()
+			client.sse("/v1/entries") {
+				val event: ServerSentEvent = incoming.first()
+				events += Json.decodeFromString(DiaryEvent.serializer(), event.data!!)
+			}
+
+			assertEquals(listOf<DiaryEvent>(DiaryEvent.EntriesSnapshot(emptyList())), events)
 		}
 }
