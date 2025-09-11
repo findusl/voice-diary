@@ -125,12 +125,10 @@ fun EntryDetailScreen(
 				horizontalArrangement = Arrangement.spacedBy(8.dp),
 				verticalArrangement = Arrangement.spacedBy(8.dp),
 			) {
-				state.audio?.let {
-					TextButton(
-						onClick = { viewModel.togglePlayback() },
-					) {
-						Text(if (state.isPlaying) "Stop" else "Play")
-					}
+				TextButton(
+					onClick = { viewModel.togglePlayback() },
+				) {
+					Text(if (state.isPlaying) "Stop" else "Play")
 				}
 				TranscribeButtonWithProgress(
 					transcriber = viewModel.transcriber,
