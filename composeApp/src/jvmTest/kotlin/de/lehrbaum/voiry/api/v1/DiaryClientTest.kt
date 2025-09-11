@@ -46,7 +46,7 @@ import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOf
-import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.test.runTest
 import io.ktor.server.plugins.contentnegotiation.ContentNegotiation as ServerContentNegotiation
 
 @OptIn(ExperimentalTime::class, ExperimentalUuidApi::class)
@@ -61,13 +61,13 @@ class DiaryClientTest {
 
 	@Test
 	fun `client receives updates and handles duplicates`() =
-		testApplication {
-			val service = runBlocking { DiaryServiceImpl.create(DiaryRepository(Files.createTempDirectory("clientTest1"))) }
-			application { module(service) }
+		runTest {
+			testApplication {
+				val service = DiaryServiceImpl.create(DiaryRepository(Files.createTempDirectory("clientTest1")))
+				application { module(service) }
 
-			createDiaryClientAgainstMockKtorApplication().use { client: DiaryClient ->
-				val entry = sampleEntry(Uuid.random())
-				runBlocking {
+				createDiaryClientAgainstMockKtorApplication().use { client: DiaryClient ->
+					val entry = sampleEntry(Uuid.random())
 					val entriesDeferred = async { client.entries.filter { it.isNotEmpty() }.first() }
 					service.addEntry(entry, ByteArray(0))
 					val entries = entriesDeferred.await()
@@ -110,221 +110,241 @@ class DiaryClientTest {
 
 	@Test
 	fun `create entry success`() =
-		testApplication {
-			val service = runBlocking {
-				DiaryServiceImpl.create(DiaryRepository(Files.createTempDirectory("clientTestCreate")))
-			}
-			application { module(service) }
-			createDiaryClientAgainstMockKtorApplication().use { client: DiaryClient ->
-				val entry = sampleEntry(Uuid.random())
-				val result = runBlocking { client.createEntry(entry, ByteArray(0)) }
-				assertEquals(entry, result)
+		runTest {
+			testApplication {
+				val service = DiaryServiceImpl.create(DiaryRepository(Files.createTempDirectory("clientTestCreate")))
+				application { module(service) }
+				createDiaryClientAgainstMockKtorApplication().use { client: DiaryClient ->
+					val entry = sampleEntry(Uuid.random())
+					val result = client.createEntry(entry, ByteArray(0))
+					assertEquals(entry, result)
+				}
 			}
 		}
 
 	@Test
 	fun `create entry caches audio`() =
-		testApplication {
-			val entry = sampleEntry(Uuid.random())
-			application {
-				install(ServerContentNegotiation) { json() }
-				routing {
-					post("/v1/entries") { call.respond(entry) }
+		runTest {
+			testApplication {
+				val entry = sampleEntry(Uuid.random())
+				application {
+					install(ServerContentNegotiation) { json() }
+					routing {
+						post("/v1/entries") { call.respond(entry) }
+					}
 				}
-			}
-			createDiaryClientAgainstMockKtorApplication().use { client: DiaryClient ->
-				val audio = byteArrayOf(7, 8, 9)
-				runBlocking { client.createEntry(entry, audio) }
-				assertContentEquals(audio, audioCache.getAudio(entry.id))
+				createDiaryClientAgainstMockKtorApplication().use { client: DiaryClient ->
+					val audio = byteArrayOf(7, 8, 9)
+					client.createEntry(entry, audio)
+					assertContentEquals(audio, audioCache.getAudio(entry.id))
+				}
 			}
 		}
 
 	@Test
 	fun `create entry 400`() =
-		testApplication {
-			application {
-				routing {
-					post("/v1/entries") { call.respond(HttpStatusCode.BadRequest) }
+		runTest {
+			testApplication {
+				application {
+					routing {
+						post("/v1/entries") { call.respond(HttpStatusCode.BadRequest) }
+					}
 				}
-			}
-			createDiaryClientAgainstMockKtorApplication().use { client: DiaryClient ->
-				val entry = sampleEntry(Uuid.random())
-				assertFailsWith<ClientRequestException> {
-					runBlocking { client.createEntry(entry, ByteArray(0)) }
+				createDiaryClientAgainstMockKtorApplication().use { client: DiaryClient ->
+					val entry = sampleEntry(Uuid.random())
+					assertFailsWith<ClientRequestException> {
+						client.createEntry(entry, ByteArray(0))
+					}
 				}
 			}
 		}
 
 	@Test
 	fun `create entry 500`() =
-		testApplication {
-			application {
-				routing {
-					post("/v1/entries") { call.respond(HttpStatusCode.InternalServerError) }
+		runTest {
+			testApplication {
+				application {
+					routing {
+						post("/v1/entries") { call.respond(HttpStatusCode.InternalServerError) }
+					}
 				}
-			}
-			createDiaryClientAgainstMockKtorApplication().use { client: DiaryClient ->
-				val entry = sampleEntry(Uuid.random())
-				assertFailsWith<ServerResponseException> {
-					runBlocking { client.createEntry(entry, ByteArray(0)) }
+				createDiaryClientAgainstMockKtorApplication().use { client: DiaryClient ->
+					val entry = sampleEntry(Uuid.random())
+					assertFailsWith<ServerResponseException> {
+						client.createEntry(entry, ByteArray(0))
+					}
 				}
 			}
 		}
 
 	@Test
 	fun `update transcription success`() =
-		testApplication {
-			val service = runBlocking {
-				DiaryServiceImpl.create(DiaryRepository(Files.createTempDirectory("clientTestUpdate")))
-			}
-			val entry = sampleEntry(Uuid.random())
-			runBlocking { service.addEntry(entry, ByteArray(0)) }
-			application { module(service) }
-			createDiaryClientAgainstMockKtorApplication().use { client: DiaryClient ->
-				val req = UpdateTranscriptionRequest("text", TranscriptionStatus.DONE, Clock.System.now())
-				runBlocking { client.updateTranscription(entry.id, req) }
+		runTest {
+			testApplication {
+				val service = DiaryServiceImpl.create(DiaryRepository(Files.createTempDirectory("clientTestUpdate")))
+				val entry = sampleEntry(Uuid.random())
+				service.addEntry(entry, ByteArray(0))
+				application { module(service) }
+				createDiaryClientAgainstMockKtorApplication().use { client: DiaryClient ->
+					val req = UpdateTranscriptionRequest("text", TranscriptionStatus.DONE, Clock.System.now())
+					client.updateTranscription(entry.id, req)
+				}
 			}
 		}
 
 	@Test
 	fun `update transcription 404`() =
-		testApplication {
-			application {
-				routing {
-					put("/v1/entries/{id}/transcription") { call.respond(HttpStatusCode.NotFound) }
+		runTest {
+			testApplication {
+				application {
+					routing {
+						put("/v1/entries/{id}/transcription") { call.respond(HttpStatusCode.NotFound) }
+					}
 				}
-			}
-			createDiaryClientAgainstMockKtorApplication().use { client: DiaryClient ->
-				val req = UpdateTranscriptionRequest(null, TranscriptionStatus.NONE, null)
-				assertFailsWith<ClientRequestException> {
-					runBlocking { client.updateTranscription(Uuid.random(), req) }
+				createDiaryClientAgainstMockKtorApplication().use { client: DiaryClient ->
+					val req = UpdateTranscriptionRequest(null, TranscriptionStatus.NONE, null)
+					assertFailsWith<ClientRequestException> {
+						client.updateTranscription(Uuid.random(), req)
+					}
 				}
 			}
 		}
 
 	@Test
 	fun `update transcription 500`() =
-		testApplication {
-			application {
-				routing {
-					put("/v1/entries/{id}/transcription") { call.respond(HttpStatusCode.InternalServerError) }
+		runTest {
+			testApplication {
+				application {
+					routing {
+						put("/v1/entries/{id}/transcription") { call.respond(HttpStatusCode.InternalServerError) }
+					}
 				}
-			}
-			createDiaryClientAgainstMockKtorApplication().use { client: DiaryClient ->
-				val req = UpdateTranscriptionRequest(null, TranscriptionStatus.NONE, null)
-				assertFailsWith<ServerResponseException> {
-					runBlocking { client.updateTranscription(Uuid.random(), req) }
+				createDiaryClientAgainstMockKtorApplication().use { client: DiaryClient ->
+					val req = UpdateTranscriptionRequest(null, TranscriptionStatus.NONE, null)
+					assertFailsWith<ServerResponseException> {
+						client.updateTranscription(Uuid.random(), req)
+					}
 				}
 			}
 		}
 
 	@Test
 	fun `delete entry success`() =
-		testApplication {
-			val service = runBlocking {
-				DiaryServiceImpl.create(DiaryRepository(Files.createTempDirectory("clientTestDelete")))
-			}
-			val entry = sampleEntry(Uuid.random())
-			runBlocking { service.addEntry(entry, ByteArray(0)) }
-			application { module(service) }
-			createDiaryClientAgainstMockKtorApplication().use { client: DiaryClient ->
-				runBlocking { client.deleteEntry(entry.id) }
+		runTest {
+			testApplication {
+				val service = DiaryServiceImpl.create(DiaryRepository(Files.createTempDirectory("clientTestDelete")))
+				val entry = sampleEntry(Uuid.random())
+				service.addEntry(entry, ByteArray(0))
+				application { module(service) }
+				createDiaryClientAgainstMockKtorApplication().use { client: DiaryClient ->
+					client.deleteEntry(entry.id)
+				}
 			}
 		}
 
 	@Test
 	fun `delete entry 404`() =
-		testApplication {
-			application {
-				routing { delete("/v1/entries/{id}") { call.respond(HttpStatusCode.NotFound) } }
-			}
-			createDiaryClientAgainstMockKtorApplication().use { client: DiaryClient ->
-				assertFailsWith<ClientRequestException> {
-					runBlocking { client.deleteEntry(Uuid.random()) }
+		runTest {
+			testApplication {
+				application {
+					routing { delete("/v1/entries/{id}") { call.respond(HttpStatusCode.NotFound) } }
+				}
+				createDiaryClientAgainstMockKtorApplication().use { client: DiaryClient ->
+					assertFailsWith<ClientRequestException> {
+						client.deleteEntry(Uuid.random())
+					}
 				}
 			}
 		}
 
 	@Test
 	fun `delete entry 500`() =
-		testApplication {
-			application {
-				routing { delete("/v1/entries/{id}") { call.respond(HttpStatusCode.InternalServerError) } }
-			}
-			createDiaryClientAgainstMockKtorApplication().use { client: DiaryClient ->
-				assertFailsWith<ServerResponseException> {
-					runBlocking { client.deleteEntry(Uuid.random()) }
+		runTest {
+			testApplication {
+				application {
+					routing { delete("/v1/entries/{id}") { call.respond(HttpStatusCode.InternalServerError) } }
+				}
+				createDiaryClientAgainstMockKtorApplication().use { client: DiaryClient ->
+					assertFailsWith<ServerResponseException> {
+						client.deleteEntry(Uuid.random())
+					}
 				}
 			}
 		}
 
 	@Test
 	fun `get audio success`() =
-		testApplication {
-			val service = runBlocking {
-				DiaryServiceImpl.create(
+		runTest {
+			testApplication {
+				val service = DiaryServiceImpl.create(
 					DiaryRepository(Files.createTempDirectory("clientTestGetAudio")),
 				)
-			}
-			val entry = sampleEntry(Uuid.random())
-			val audio = byteArrayOf(1, 2, 3)
-			runBlocking { service.addEntry(entry, audio) }
-			application { module(service) }
-			createDiaryClientAgainstMockKtorApplication().use { client: DiaryClient ->
-				val result = runBlocking { client.getAudio(entry.id) }
-				assertContentEquals(audio, result)
+				val entry = sampleEntry(Uuid.random())
+				val audio = byteArrayOf(1, 2, 3)
+				service.addEntry(entry, audio)
+				application { module(service) }
+				createDiaryClientAgainstMockKtorApplication().use { client: DiaryClient ->
+					val result = client.getAudio(entry.id)
+					assertContentEquals(audio, result)
+				}
 			}
 		}
 
 	@Test
 	fun `get audio cached`() =
-		testApplication {
-			val audio = byteArrayOf(4, 5, 6)
-			var callCount = 0
-			application {
-				routing {
-					get("/v1/entries/{id}/audio") {
-						callCount++
-						call.respondBytes(audio)
+		runTest {
+			testApplication {
+				val audio = byteArrayOf(4, 5, 6)
+				var callCount = 0
+				application {
+					routing {
+						get("/v1/entries/{id}/audio") {
+							callCount++
+							call.respondBytes(audio)
+						}
 					}
 				}
-			}
-			createDiaryClientAgainstMockKtorApplication().use { client: DiaryClient ->
-				val id = Uuid.random()
-				val first = runBlocking { client.getAudio(id) }
-				val second = runBlocking { client.getAudio(id) }
-				assertContentEquals(audio, first)
-				assertContentEquals(audio, second)
-				assertEquals(1, callCount)
+				createDiaryClientAgainstMockKtorApplication().use { client: DiaryClient ->
+					val id = Uuid.random()
+					val first = client.getAudio(id)
+					val second = client.getAudio(id)
+					assertContentEquals(audio, first)
+					assertContentEquals(audio, second)
+					assertEquals(1, callCount)
+				}
 			}
 		}
 
 	@Test
 	fun `get audio 404`() =
-		testApplication {
-			application {
-				routing { get("/v1/entries/{id}/audio") { call.respond(HttpStatusCode.NotFound) } }
-			}
-			createDiaryClientAgainstMockKtorApplication().use { client: DiaryClient ->
-				assertFailsWith<ClientRequestException> {
-					runBlocking { client.getAudio(Uuid.random()) }
+		runTest {
+			testApplication {
+				application {
+					routing { get("/v1/entries/{id}/audio") { call.respond(HttpStatusCode.NotFound) } }
+				}
+				createDiaryClientAgainstMockKtorApplication().use { client: DiaryClient ->
+					assertFailsWith<ClientRequestException> {
+						client.getAudio(Uuid.random())
+					}
 				}
 			}
 		}
 
 	@Test
 	fun `get audio 500`() =
-		testApplication {
-			application {
-				routing {
-					get("/v1/entries/{id}/audio") {
-						call.respond(HttpStatusCode.InternalServerError)
+		runTest {
+			testApplication {
+				application {
+					routing {
+						get("/v1/entries/{id}/audio") {
+							call.respond(HttpStatusCode.InternalServerError)
+						}
 					}
 				}
-			}
-			createDiaryClientAgainstMockKtorApplication().use { client: DiaryClient ->
-				assertFailsWith<ServerResponseException> {
-					runBlocking { client.getAudio(Uuid.random()) }
+				createDiaryClientAgainstMockKtorApplication().use { client: DiaryClient ->
+					assertFailsWith<ServerResponseException> {
+						client.getAudio(Uuid.random())
+					}
 				}
 			}
 		}

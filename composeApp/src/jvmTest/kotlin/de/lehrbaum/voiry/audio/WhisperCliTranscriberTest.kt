@@ -5,14 +5,14 @@ import java.nio.file.Files
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
-import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.test.runTest
 import kotlinx.io.Buffer
 import kotlinx.io.writeString
 
 class WhisperCliTranscriberTest {
 	@Test
 	fun `invokes whisper-cli with language detection and parses json`() =
-		runBlocking {
+		runTest {
 			val commands = mutableListOf<List<String>>()
 			val runner: (List<String>) -> ProcessResult = { command ->
 				commands += command

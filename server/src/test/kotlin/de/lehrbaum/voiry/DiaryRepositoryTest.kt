@@ -11,7 +11,7 @@ import kotlin.time.Duration.Companion.seconds
 import kotlin.time.ExperimentalTime
 import kotlin.uuid.ExperimentalUuidApi
 import kotlin.uuid.Uuid
-import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.test.runTest
 
 private const val TEST_TRANSCRIPTION = "text"
 
@@ -19,7 +19,7 @@ private const val TEST_TRANSCRIPTION = "text"
 class DiaryRepositoryTest {
 	@Test
 	fun `add update delete persists correctly`() =
-		runBlocking {
+		runTest {
 			val dir = Files.createTempDirectory("diaryRepoTest")
 			val repository = DiaryRepository(dir)
 			val entry = VoiceDiaryEntry(

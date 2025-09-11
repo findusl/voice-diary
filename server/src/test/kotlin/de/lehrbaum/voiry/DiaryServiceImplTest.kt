@@ -12,13 +12,13 @@ import kotlin.uuid.ExperimentalUuidApi
 import kotlin.uuid.Uuid
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.produceIn
-import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.test.runTest
 
 @OptIn(ExperimentalTime::class, ExperimentalUuidApi::class)
 class DiaryServiceImplTest {
 	@Test
 	fun `updateTranscription on missing entry emits no events`() =
-		runBlocking {
+		runTest {
 			val repository = DiaryRepository(Files.createTempDirectory("serviceTest"))
 			val service = DiaryServiceImpl.create(repository)
 			val channel = service.eventFlow().produceIn(this)
@@ -38,7 +38,7 @@ class DiaryServiceImplTest {
 
 	@Test
 	fun `deleteEntry on missing entry emits no events`() =
-		runBlocking {
+		runTest {
 			val repository = DiaryRepository(Files.createTempDirectory("deleteEntryTest"))
 			val service = DiaryServiceImpl.create(repository)
 			val channel = service.eventFlow().produceIn(this)
