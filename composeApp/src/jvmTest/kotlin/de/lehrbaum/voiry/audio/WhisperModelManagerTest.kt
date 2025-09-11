@@ -5,12 +5,12 @@ import kotlin.io.path.exists
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
-import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.test.runTest
 
 class WhisperModelManagerTest {
 	@Test
 	fun deletesLeftoverPartFilesOnInitialize() =
-		runBlocking {
+		runTest {
 			val tempDir = Files.createTempDirectory("whisper-test")
 			val part = tempDir.resolve("leftover.part")
 			Files.createFile(part)
@@ -26,7 +26,7 @@ class WhisperModelManagerTest {
 
 	@Test
 	fun setsProgressToOneWhenModelAlreadyExists() =
-		runBlocking {
+		runTest {
 			val tempDir = Files.createTempDirectory("whisper-test")
 			val modelPath = tempDir.resolve("model.bin")
 			Files.createFile(modelPath)
