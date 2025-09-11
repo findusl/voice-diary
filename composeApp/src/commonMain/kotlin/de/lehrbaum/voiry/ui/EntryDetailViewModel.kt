@@ -44,11 +44,6 @@ class EntryDetailViewModel(
 				}
 			}
 		}
-		viewModelScope.launch {
-			runCatching { diaryClient.getAudio(entryId) }
-				.onSuccess { data -> _uiState.update { it.copy(audio = data) } }
-				.onFailure { e -> _uiState.update { it.copy(error = e.message) } }
-		}
 	}
 
 	override fun onCleared() {
@@ -61,7 +56,14 @@ class EntryDetailViewModel(
 	}
 
 	fun togglePlayback() {
-		val audio = _uiState.value.audio ?: return
+		val audio = _uiState.value.audio
+		if (audio == null) {
+			downloadAudio { data ->
+				player.play(data)
+				_uiState.update { state -> state.copy(isPlaying = true) }
+			}
+			return
+		}
 		if (_uiState.value.isPlaying) {
 			player.stop()
 		} else {
@@ -109,15 +111,36 @@ class EntryDetailViewModel(
 	}
 
 	fun transcribe() {
-		val audio = _uiState.value.audio ?: return
 		val t = transcriber
 		if (t == null) {
 			_uiState.update { it.copy(error = "Transcriber unavailable") }
 			return
 		}
+		val audio = _uiState.value.audio
+		if (audio == null) {
+			downloadAudio { data ->
+				viewModelScope.launch {
+					transcribeEntry(diaryClient, t, entryId, data)
+						.onFailure { e ->
+							_uiState.update { it.copy(error = e.message) }
+						}
+				}
+			}
+		} else {
+			viewModelScope.launch {
+				transcribeEntry(diaryClient, t, entryId, audio)
+					.onFailure { e -> _uiState.update { it.copy(error = e.message) } }
+			}
+		}
+	}
+
+	private fun downloadAudio(onSuccess: (ByteArray) -> Unit) {
 		viewModelScope.launch {
-			transcribeEntry(diaryClient, t, entryId, audio)
-				.onFailure { e -> _uiState.update { it.copy(error = e.message) } }
+			runCatching { diaryClient.getAudio(entryId) }
+				.onSuccess { data ->
+					_uiState.update { it.copy(audio = data) }
+					onSuccess(data)
+				}.onFailure { e -> _uiState.update { it.copy(error = e.message) } }
 		}
 	}
 
