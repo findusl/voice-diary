@@ -28,16 +28,16 @@ import de.lehrbaum.voiry.api.v1.VoiceDiaryEntry
 import de.lehrbaum.voiry.audio.ModelDownloader
 import de.lehrbaum.voiry.audio.Recorder
 import de.lehrbaum.voiry.audio.Transcriber
+import dev.mokkery.answering.calls
 import dev.mokkery.answering.returns
 import dev.mokkery.every
+import dev.mokkery.everySuspend
 import dev.mokkery.mock
-import io.ktor.client.HttpClient
 import kotlin.time.Clock
 import kotlin.time.Duration
 import kotlin.time.ExperimentalTime
 import kotlin.uuid.ExperimentalUuidApi
 import kotlin.uuid.Uuid
-import kotlinx.collections.immutable.PersistentList
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.collections.immutable.toPersistentList
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -60,7 +60,7 @@ class TranscribeButtonWithProgressTest {
 				transcriptionText = "Transcript 1",
 				transcriptionStatus = TranscriptionStatus.DONE,
 			)
-			val client = SingleEntryDiaryClient(entry)
+			val client = singleEntryDiaryClient(entry)
 			val recorder = mock<Recorder>()
 			every { recorder.isAvailable } returns false
 			val transcriber = FakeProgressTranscriber()
@@ -108,7 +108,7 @@ class TranscribeButtonWithProgressTest {
 				transcriptionText = null,
 				transcriptionStatus = TranscriptionStatus.NONE,
 			)
-			val client = SingleEntryDiaryClient(entry)
+			val client = singleEntryDiaryClient(entry)
 			val recorder = mock<Recorder>()
 			every { recorder.isAvailable } returns false
 			val transcriber = FakeProgressTranscriber(0f)
@@ -147,15 +147,15 @@ private class FakeProgressTranscriber(initial: Float? = 0.5f) : Transcriber {
 }
 
 @OptIn(ExperimentalTime::class, ExperimentalUuidApi::class)
-private class SingleEntryDiaryClient(entry: VoiceDiaryEntry) : DiaryClient("", HttpClient()) {
-	private val _entries = MutableStateFlow<PersistentList<VoiceDiaryEntry>>(listOf(entry).toPersistentList())
-	override val entries: MutableStateFlow<PersistentList<VoiceDiaryEntry>> get() = _entries
-
-	override suspend fun deleteEntry(id: Uuid) {
-		_entries.value = persistentListOf()
+private fun singleEntryDiaryClient(entry: VoiceDiaryEntry): DiaryClient {
+	val entriesFlow = MutableStateFlow(listOf(entry).toPersistentList())
+	return mock<DiaryClient> {
+		every { entries } returns entriesFlow
+		every { connectionError } returns MutableStateFlow(null)
+		every { entryFlow(entry.id) } returns MutableStateFlow(entry)
+		everySuspend { deleteEntry(entry.id) } calls { _ -> entriesFlow.value = persistentListOf() }
+		everySuspend { getAudio(entry.id) } returns byteArrayOf(0)
 	}
-
-	override fun close() {}
 }
 
 private class ProgressFakeLifecycleOwner : LifecycleOwner {
