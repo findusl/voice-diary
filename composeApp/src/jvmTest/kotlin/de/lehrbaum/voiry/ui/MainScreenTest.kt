@@ -87,6 +87,36 @@ class MainScreenTest {
 		}
 
 	@Test
+	fun permission_error_shows_grant_button_and_triggers_callback() =
+		runComposeUiTest {
+			val client = FakeDiaryClient(connectionErrors = mutableListOf("Permission missing"))
+			val recorder = mock<Recorder>()
+			every { recorder.isAvailable } returns true
+			var permissionRequested = false
+
+			setContent {
+				CompositionLocalProvider(
+					LocalLifecycleOwner provides FakeLifecycleOwner(),
+					LocalViewModelStoreOwner provides FakeViewModelStoreOwner(),
+				) {
+					MaterialTheme {
+						MainScreen(
+							diaryClient = client,
+							recorder = recorder,
+							transcriber = null,
+							onEntryClick = { },
+							onRequestAudioPermission = { permissionRequested = true },
+						)
+					}
+				}
+			}
+
+			waitUntilAtLeastOneExists(hasText("Grant permission"))
+			onNodeWithText("Grant permission").performClick()
+			assert(permissionRequested)
+		}
+
+	@Test
 	fun displays_seeded_recordings_and_title_and_hides_fab_when_unavailable() =
 		runComposeUiTest {
 			val client = FakeDiaryClient()
