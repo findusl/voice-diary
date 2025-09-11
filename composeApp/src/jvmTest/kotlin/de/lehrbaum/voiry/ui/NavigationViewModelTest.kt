@@ -26,17 +26,17 @@ import de.lehrbaum.voiry.api.v1.VoiceDiaryEntry
 import de.lehrbaum.voiry.audio.Player
 import de.lehrbaum.voiry.audio.Recorder
 import dev.mokkery.MockMode
+import dev.mokkery.answering.calls
 import dev.mokkery.answering.returns
 import dev.mokkery.every
+import dev.mokkery.matcher.any
 import dev.mokkery.mock
 import dev.mokkery.verify
-import io.ktor.client.HttpClient
 import kotlin.time.Clock
 import kotlin.time.Duration
 import kotlin.time.ExperimentalTime
 import kotlin.uuid.ExperimentalUuidApi
 import kotlin.uuid.Uuid
-import kotlinx.collections.immutable.PersistentList
 import kotlinx.collections.immutable.toPersistentList
 import kotlinx.coroutines.flow.MutableStateFlow
 import org.junit.Test
@@ -64,7 +64,7 @@ class NavigationViewModelTest {
 				transcriptionText = "Transcript 2",
 				transcriptionStatus = TranscriptionStatus.DONE,
 			)
-			val client = NavigationFakeDiaryClient(listOf(entry1, entry2))
+			val client = navigationDiaryClientMock(listOf(entry1, entry2))
 			val recorder = mock<Recorder>()
 			every { recorder.isAvailable } returns false
 			val player1 = mock<Player>(mode = MockMode.autoUnit)
@@ -120,13 +120,15 @@ class NavigationViewModelTest {
 }
 
 @OptIn(ExperimentalUuidApi::class, ExperimentalTime::class)
-private class NavigationFakeDiaryClient(
-	entries: List<VoiceDiaryEntry>,
-) : DiaryClient(baseUrl = "", httpClient = HttpClient()) {
-	private val _entries = MutableStateFlow<PersistentList<VoiceDiaryEntry>>(entries.toPersistentList())
-	override val entries: MutableStateFlow<PersistentList<VoiceDiaryEntry>> get() = _entries
-
-	override suspend fun getAudio(id: Uuid): ByteArray = byteArrayOf(0)
+private fun navigationDiaryClientMock(initialEntries: List<VoiceDiaryEntry>): DiaryClient {
+	val entriesFlow = MutableStateFlow(initialEntries.toPersistentList())
+	return mock<DiaryClient> {
+		every { connectionError } returns MutableStateFlow(null)
+		every { entries } returns entriesFlow
+		every { entryFlow(any()) } calls { (id: Uuid) ->
+			MutableStateFlow(entriesFlow.value.firstOrNull { it.id == id })
+		}
+	}
 }
 
 private class NavigationFakeLifecycleOwner : LifecycleOwner {

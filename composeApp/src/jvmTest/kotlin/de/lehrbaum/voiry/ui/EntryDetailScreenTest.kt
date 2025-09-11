@@ -31,17 +31,20 @@ import de.lehrbaum.voiry.audio.ModelDownloader
 import de.lehrbaum.voiry.audio.Player
 import de.lehrbaum.voiry.audio.Transcriber
 import dev.mokkery.MockMode
+import dev.mokkery.answering.calls
 import dev.mokkery.answering.returns
 import dev.mokkery.every
+import dev.mokkery.everySuspend
+import dev.mokkery.matcher.any
 import dev.mokkery.mock
 import dev.mokkery.verify
-import io.ktor.client.HttpClient
 import kotlin.time.Clock
 import kotlin.time.Duration
 import kotlin.time.ExperimentalTime
 import kotlin.uuid.ExperimentalUuidApi
 import kotlin.uuid.Uuid
 import kotlinx.collections.immutable.PersistentList
+import kotlinx.collections.immutable.persistentListOf
 import kotlinx.collections.immutable.toPersistentList
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.io.Buffer
@@ -63,7 +66,8 @@ class EntryDetailScreenTest {
 				transcriptionStatus = TranscriptionStatus.DONE,
 			)
 			val audio = byteArrayOf(1)
-			val client = EntryFakeDiaryClient(entry, audio)
+			val clientMock = entryDiaryClientMock(entry, audio)
+			val client = clientMock.client
 			val player = mock<Player>(mode = MockMode.autoUnit)
 			every { player.isAvailable } returns true
 
@@ -106,7 +110,8 @@ class EntryDetailScreenTest {
 				transcriptionText = "Transcript 1",
 				transcriptionStatus = TranscriptionStatus.DONE,
 			)
-			val client = EntryFakeDiaryClient(entry)
+			val clientMock = entryDiaryClientMock(entry)
+			val client = clientMock.client
 			val player = mock<Player>(mode = MockMode.autoUnit)
 			every { player.isAvailable } returns true
 
@@ -138,7 +143,7 @@ class EntryDetailScreenTest {
 			onNodeWithText("Save").assertIsEnabled()
 			onNodeWithText("Save").performClick()
 			waitUntilAtLeastOneExists(hasText("Edited"))
-			assert(client.lastUpdateRequest?.transcriptionText == "Edited")
+			assert(clientMock.lastUpdateRequest.value?.transcriptionText == "Edited")
 		}
 
 	@Test
@@ -153,7 +158,8 @@ class EntryDetailScreenTest {
 				transcriptionStatus = TranscriptionStatus.NONE,
 			)
 			val audio = byteArrayOf(1)
-			val client = EntryFakeDiaryClient(entry, audio)
+			val clientMock = entryDiaryClientMock(entry, audio)
+			val client = clientMock.client
 			val player = mock<Player>(mode = MockMode.autoUnit)
 			val transcriber = ReadyTranscriber()
 			every { player.isAvailable } returns true
@@ -189,7 +195,8 @@ class EntryDetailScreenTest {
 				transcriptionText = "Transcript 1",
 				transcriptionStatus = TranscriptionStatus.DONE,
 			)
-			val client = EntryFakeDiaryClient(entry)
+			val clientMock = entryDiaryClientMock(entry)
+			val client = clientMock.client
 			val player = mock<Player>(mode = MockMode.autoUnit)
 			every { player.isAvailable } returns true
 			var backCalled = false
@@ -216,7 +223,7 @@ class EntryDetailScreenTest {
 			onNodeWithText("Delete").performClick()
 			waitUntilDoesNotExist(hasText("Delete"))
 			assert(backCalled)
-			assert(client.entries.value.isEmpty())
+			assert(clientMock.entries.value.isEmpty())
 		}
 
 	@Test
@@ -230,7 +237,8 @@ class EntryDetailScreenTest {
 				transcriptionText = "Transcript 1",
 				transcriptionStatus = TranscriptionStatus.DONE,
 			)
-			val client = EntryFakeDiaryClient(entry, failDeletion = true)
+			val clientMock = entryDiaryClientMock(entry, failDeletion = true)
+			val client = clientMock.client
 			val player = mock<Player>(mode = MockMode.autoUnit)
 			every { player.isAvailable } returns true
 			var backCalled = false
@@ -257,7 +265,7 @@ class EntryDetailScreenTest {
 			onNodeWithText("Delete").performClick()
 			waitUntilAtLeastOneExists(hasText("Error: fail delete"))
 			assert(!backCalled)
-			assert(client.entries.value.isNotEmpty())
+			assert(clientMock.entries.value.isNotEmpty())
 		}
 
 	@Test
@@ -271,7 +279,8 @@ class EntryDetailScreenTest {
 				transcriptionText = null,
 				transcriptionStatus = TranscriptionStatus.NONE,
 			)
-			val client = EntryFakeDiaryClient(entry)
+			val clientMock = entryDiaryClientMock(entry)
+			val client = clientMock.client
 			val player = mock<Player>(mode = MockMode.autoUnit)
 			every { player.isAvailable } returns true
 
@@ -297,40 +306,45 @@ class EntryDetailScreenTest {
 }
 
 @OptIn(ExperimentalUuidApi::class, ExperimentalTime::class)
-private class EntryFakeDiaryClient(
+private data class EntryDiaryClientMock(
+	val client: DiaryClient,
+	val entries: MutableStateFlow<PersistentList<VoiceDiaryEntry>>,
+	val lastUpdateRequest: MutableStateFlow<UpdateTranscriptionRequest?>,
+)
+
+@OptIn(ExperimentalUuidApi::class, ExperimentalTime::class)
+private fun entryDiaryClientMock(
 	entry: VoiceDiaryEntry,
-	private val audio: ByteArray = byteArrayOf(0),
-	private val failDeletion: Boolean = false,
-) : DiaryClient(baseUrl = "", httpClient = HttpClient()) {
-	private val _entries = MutableStateFlow<PersistentList<VoiceDiaryEntry>>(listOf(entry).toPersistentList())
-	override val entries: MutableStateFlow<PersistentList<VoiceDiaryEntry>> get() = _entries
-	var lastUpdateRequest: UpdateTranscriptionRequest? = null
-
-	override suspend fun createEntry(entry: VoiceDiaryEntry, audio: ByteArray): VoiceDiaryEntry = entry
-
-	override suspend fun deleteEntry(id: Uuid) {
-		if (failDeletion) {
-			throw IllegalStateException("fail delete")
+	audio: ByteArray = byteArrayOf(0),
+	failDeletion: Boolean = false,
+): EntryDiaryClientMock {
+	val entriesFlow = MutableStateFlow(listOf(entry).toPersistentList())
+	val entryFlow = MutableStateFlow<VoiceDiaryEntry?>(entry)
+	val lastUpdate = MutableStateFlow<UpdateTranscriptionRequest?>(null)
+	val client = mock<DiaryClient> {
+		every { connectionError } returns MutableStateFlow(null)
+		every { entries } returns entriesFlow
+		every { entryFlow(entry.id) } returns entryFlow
+		everySuspend { getAudio(entry.id) } returns audio
+		everySuspend { deleteEntry(entry.id) } calls { _ ->
+			if (failDeletion) {
+				throw IllegalStateException("fail delete")
+			}
+			entriesFlow.value = persistentListOf()
+			entryFlow.value = null
 		}
-		_entries.value = _entries.value.filterNot { it.id == id }.toPersistentList()
+		everySuspend { updateTranscription(entry.id, any()) } calls { args ->
+			val request = args.arg<UpdateTranscriptionRequest>(1)
+			lastUpdate.value = request
+			val updated = entry.copy(
+				transcriptionText = request.transcriptionText,
+				transcriptionStatus = request.transcriptionStatus,
+			)
+			entriesFlow.value = listOf(updated).toPersistentList()
+			entryFlow.value = updated
+		}
 	}
-
-	override suspend fun getAudio(id: Uuid): ByteArray = audio
-
-	override suspend fun updateTranscription(id: Uuid, request: UpdateTranscriptionRequest) {
-		lastUpdateRequest = request
-		_entries.value = _entries.value
-			.map {
-				if (it.id == id) {
-					it.copy(
-						transcriptionText = request.transcriptionText,
-						transcriptionStatus = request.transcriptionStatus,
-					)
-				} else {
-					it
-				}
-			}.toPersistentList()
-	}
+	return EntryDiaryClientMock(client, entriesFlow, lastUpdate)
 }
 
 private class EntryFakeLifecycleOwner : LifecycleOwner {

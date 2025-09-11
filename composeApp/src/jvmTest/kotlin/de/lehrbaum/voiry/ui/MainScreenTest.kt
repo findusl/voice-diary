@@ -25,10 +25,12 @@ import de.lehrbaum.voiry.api.v1.DiaryClient
 import de.lehrbaum.voiry.api.v1.TranscriptionStatus
 import de.lehrbaum.voiry.api.v1.VoiceDiaryEntry
 import de.lehrbaum.voiry.audio.Recorder
+import dev.mokkery.answering.calls
 import dev.mokkery.answering.returns
 import dev.mokkery.every
+import dev.mokkery.everySuspend
+import dev.mokkery.matcher.any
 import dev.mokkery.mock
-import io.ktor.client.HttpClient
 import kotlin.time.Clock
 import kotlin.time.Duration
 import kotlin.time.ExperimentalTime
@@ -48,13 +50,13 @@ class MainScreenTest {
 	@Test
 	fun error_banner_persists_across_retries_and_disappears_on_success() =
 		runComposeUiTest {
-			val client =
-				FakeDiaryClient(
-					connectionErrors = mutableListOf(
-						"Connection refused",
-						"Still no connection",
-					),
-				)
+			val clientMock = diaryClientMock(
+				connectionErrors = listOf(
+					"Connection refused",
+					"Still no connection",
+				),
+			)
+			val client = clientMock.client
 			val recorder = mock<Recorder>()
 			every { recorder.isAvailable } returns true
 
@@ -76,12 +78,12 @@ class MainScreenTest {
 
 			waitUntilAtLeastOneExists(hasText("Error: Connection refused"))
 
-			client.retry()
+			clientMock.retry()
 
 			waitUntilAtLeastOneExists(hasText("Error: Still no connection"))
 			onAllNodesWithText("Error: Connection refused").assertCountEquals(0)
 
-			client.retry()
+			clientMock.retry()
 
 			waitUntilDoesNotExist(hasText("Error: Still no connection"))
 		}
@@ -89,7 +91,8 @@ class MainScreenTest {
 	@Test
 	fun permission_error_shows_grant_button_and_triggers_callback() =
 		runComposeUiTest {
-			val client = FakeDiaryClient(connectionErrors = mutableListOf("Permission missing"))
+			val clientMock = diaryClientMock(connectionErrors = listOf("Permission missing"))
+			val client = clientMock.client
 			val recorder = mock<Recorder>()
 			every { recorder.isAvailable } returns true
 			var permissionRequested = false
@@ -119,7 +122,7 @@ class MainScreenTest {
 	@Test
 	fun displays_seeded_recordings_and_title_and_hides_fab_when_unavailable() =
 		runComposeUiTest {
-			val client = FakeDiaryClient()
+			val client = diaryClientMock().client
 			val unavailableRecorder = mock<Recorder>()
 			every { unavailableRecorder.isAvailable } returns false
 
@@ -162,7 +165,8 @@ class MainScreenTest {
 	@Test
 	fun press_record_then_stop_adds_new_item_and_toggles_label() =
 		runComposeUiTest {
-			val client = FakeDiaryClient()
+			val clientMock = diaryClientMock()
+			val client = clientMock.client
 			val buffer = Buffer().apply { writeString("new bytes") }
 			val recorder = mock<Recorder>()
 			every { recorder.isAvailable } returns true
@@ -206,7 +210,8 @@ class MainScreenTest {
 	@Test
 	fun delete_removes_item_from_list() =
 		runComposeUiTest {
-			val client = FakeDiaryClient()
+			val clientMock = diaryClientMock()
+			val client = clientMock.client
 			val recorder = mock<Recorder>()
 			every { recorder.isAvailable } returns false
 
@@ -243,7 +248,7 @@ class MainScreenTest {
 				transcriptionText = null,
 				transcriptionStatus = TranscriptionStatus.NONE,
 			)
-			val client = FakeDiaryClient(initial = listOf(entry).toPersistentList())
+			val client = diaryClientMock(initial = listOf(entry).toPersistentList()).client
 			val recorder = mock<Recorder>()
 			every { recorder.isAvailable } returns false
 
@@ -270,7 +275,19 @@ class MainScreenTest {
 }
 
 @OptIn(ExperimentalTime::class, ExperimentalUuidApi::class)
-private class FakeDiaryClient(
+private data class DiaryClientMock(
+	val client: DiaryClient,
+	val entries: MutableStateFlow<PersistentList<VoiceDiaryEntry>>,
+	val connectionError: MutableStateFlow<String?>,
+	private val pendingErrors: ArrayDeque<String>,
+) {
+	fun retry() {
+		connectionError.value = pendingErrors.removeFirstOrNull()
+	}
+}
+
+@OptIn(ExperimentalTime::class, ExperimentalUuidApi::class)
+private fun diaryClientMock(
 	initial: PersistentList<VoiceDiaryEntry> = List(3) { idx ->
 		VoiceDiaryEntry(
 			id = Uuid.random(),
@@ -281,35 +298,31 @@ private class FakeDiaryClient(
 			transcriptionStatus = TranscriptionStatus.DONE,
 		)
 	}.toPersistentList(),
-	connectionErrors: MutableList<String> = mutableListOf(),
-) : DiaryClient(baseUrl = "", httpClient = HttpClient()) {
-	private val pendingErrors = ArrayDeque(connectionErrors)
-
-	init {
-		connectionErrorState.value = pendingErrors.removeFirstOrNull()
+	connectionErrors: List<String> = emptyList(),
+): DiaryClientMock {
+	val pendingErrors = ArrayDeque(connectionErrors)
+	val connectionErrorFlow = MutableStateFlow(pendingErrors.removeFirstOrNull())
+	val entriesFlow = MutableStateFlow(initial)
+	val client = mock<DiaryClient> {
+		every { entries } returns entriesFlow
+		every { connectionError } returns connectionErrorFlow
+		everySuspend { createEntry(any(), any()) } calls { (entry: VoiceDiaryEntry, _: ByteArray) ->
+			val withTranscript = entry.copy(
+				transcriptionText = "Transcript for ${entry.title}",
+				transcriptionStatus = TranscriptionStatus.DONE,
+			)
+			entriesFlow.value = entriesFlow.value.add(0, withTranscript)
+			withTranscript
+		}
+		everySuspend { deleteEntry(any()) } calls { (id: Uuid) ->
+			entriesFlow.value = entriesFlow.value.filterNot { it.id == id }.toPersistentList()
+		}
+		every { entryFlow(any()) } calls { (id: Uuid) ->
+			MutableStateFlow(entriesFlow.value.firstOrNull { it.id == id })
+		}
+		everySuspend { getAudio(any()) } returns byteArrayOf(0)
 	}
-
-	fun retry() {
-		connectionErrorState.value = pendingErrors.removeFirstOrNull()
-	}
-
-	private val _entries = MutableStateFlow(initial)
-	override val entries: MutableStateFlow<PersistentList<VoiceDiaryEntry>> get() = _entries
-
-	override suspend fun createEntry(entry: VoiceDiaryEntry, audio: ByteArray): VoiceDiaryEntry {
-		val withTranscript = entry.copy(
-			transcriptionText = "Transcript for ${entry.title}",
-			transcriptionStatus = TranscriptionStatus.DONE,
-		)
-		_entries.value = _entries.value.add(0, withTranscript)
-		return withTranscript
-	}
-
-	override suspend fun deleteEntry(id: Uuid) {
-		_entries.value = _entries.value.filterNot { it.id == id }.toPersistentList()
-	}
-
-	override fun close() {}
+	return DiaryClientMock(client, entriesFlow, connectionErrorFlow, pendingErrors)
 }
 
 private class FakeLifecycleOwner : LifecycleOwner {
