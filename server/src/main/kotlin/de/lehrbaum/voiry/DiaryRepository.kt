@@ -25,6 +25,8 @@ import org.jetbrains.exposed.sql.transactions.experimental.newSuspendedTransacti
 import org.jetbrains.exposed.sql.transactions.transaction
 import org.jetbrains.exposed.sql.update
 
+private const val STATUS_NAME_MAX_LENGTH = 20 // Maximum TranscriptionStatus name length
+
 /**
  * Repository handling persistence of diary entries and their audio files.
  */
@@ -46,7 +48,11 @@ class DiaryRepository(private val baseDir: Path) {
 		val recordedAt = long("recorded_at")
 		val duration = long("duration_ms")
 		val transcriptionText = text("transcription_text").nullable()
-		val transcriptionStatus = enumerationByName("transcription_status", 20, TranscriptionStatus::class)
+		val transcriptionStatus = enumerationByName(
+			"transcription_status",
+			STATUS_NAME_MAX_LENGTH,
+			TranscriptionStatus::class,
+		)
 		val transcriptionUpdatedAt = long("transcription_updated_at").nullable()
 		override val primaryKey = PrimaryKey(id)
 	}
