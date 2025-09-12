@@ -10,16 +10,23 @@ plugins {
 	alias(libs.plugins.kotlinMultiplatform) apply false
 	alias(libs.plugins.mokkery) apply false
 	alias(libs.plugins.ktlint)
+	alias(libs.plugins.detekt)
 }
 
 allprojects {
 	apply(plugin = rootProject.libs.plugins.ktlint.get().pluginId)
+	apply(plugin = rootProject.libs.plugins.detekt.get().pluginId)
 
 	ktlint {
 		filter {
 			exclude("**/generated/**")
 			exclude("**/BuildKonfig.kt")
 		}
+	}
+
+	detekt {
+		config.setFrom("$rootDir/config/detekt/detekt.yml")
+		baseline = file("$rootDir/config/detekt/baseline.xml")
 	}
 }
 
@@ -35,5 +42,6 @@ tasks.register("checkAgentsEnvironment") {
 		":shared:testReleaseUnitTest",
 		":server:test",
 		"ktlintCheck",
+		"detekt",
 	)
 }
