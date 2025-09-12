@@ -42,6 +42,8 @@ tasks.register("checkAgentsEnvironment") {
 		":shared:testReleaseUnitTest",
 		":server:test",
 		"ktlintCheck",
-		"detekt",
+		":composeApp:detekt",
+		":shared:detekt",
+		":server:detekt",
 	)
 }
