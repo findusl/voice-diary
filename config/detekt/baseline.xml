@@ -1,0 +1,8 @@
+<?xml version="1.0" ?>
+<SmellBaseline>
+  <ManuallySuppressedIssues/>
+  <CurrentIssues>
+    <ID>LongMethod:Application.kt$fun Application.module(service: DiaryService = runBlocking { DiaryServiceImpl.create() })</ID>
+    <ID>MagicNumber:DiaryRepository.kt$DiaryRepository.Entries$20</ID>
+  </CurrentIssues>
+</SmellBaseline>
