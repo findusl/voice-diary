@@ -11,6 +11,7 @@ import de.lehrbaum.voiry.audio.Player
 import de.lehrbaum.voiry.audio.Transcriber
 import de.lehrbaum.voiry.audio.platformPlayer
 import de.lehrbaum.voiry.audio.platformTranscriber
+import de.lehrbaum.voiry.runSuspendCatching
 import java.io.Closeable
 import kotlin.time.Clock
 import kotlin.time.ExperimentalTime
@@ -93,7 +94,7 @@ class EntryDetailViewModel(
 		val edited = _uiState.value.editedText
 		viewModelScope.launch {
 			_uiState.update { it.copy(isSaving = true) }
-			runCatching {
+			runSuspendCatching {
 				diaryClient.updateTranscription(
 					entry.id,
 					UpdateTranscriptionRequest(
@@ -136,7 +137,7 @@ class EntryDetailViewModel(
 
 	private fun downloadAudio(onSuccess: (ByteArray) -> Unit) {
 		viewModelScope.launch {
-			runCatching { diaryClient.getAudio(entryId) }
+			runSuspendCatching { diaryClient.getAudio(entryId) }
 				.onSuccess { data ->
 					_uiState.update { it.copy(audio = data) }
 					onSuccess(data)
@@ -146,7 +147,7 @@ class EntryDetailViewModel(
 
 	fun delete(onSuccess: () -> Unit) {
 		viewModelScope.launch {
-			runCatching { diaryClient.deleteEntry(entryId) }
+			runSuspendCatching { diaryClient.deleteEntry(entryId) }
 				.onSuccess { onSuccess() }
 				.onFailure { e -> _uiState.update { it.copy(error = e.message) } }
 		}
@@ -174,7 +175,7 @@ private suspend fun transcribeEntry(
 	entryId: Uuid,
 	audio: ByteArray,
 ): Result<Unit> =
-	runCatching {
+	runSuspendCatching {
 		val buffer = Buffer().apply { write(audio) }
 		val text = transcriber.transcribe(buffer)
 		diaryClient.updateTranscription(

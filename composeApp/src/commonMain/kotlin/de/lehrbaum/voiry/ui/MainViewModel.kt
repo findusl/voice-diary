@@ -10,6 +10,7 @@ import de.lehrbaum.voiry.api.v1.VoiceDiaryEntry
 import de.lehrbaum.voiry.audio.Recorder
 import de.lehrbaum.voiry.audio.Transcriber
 import de.lehrbaum.voiry.audio.platformRecorder
+import de.lehrbaum.voiry.runSuspendCatching
 import io.github.aakira.napier.Napier
 import java.io.Closeable
 import kotlin.time.Clock
@@ -124,7 +125,7 @@ class MainViewModel(
 				recordedAt = Clock.System.now(),
 				duration = Duration.ZERO,
 			)
-			runCatching { diaryClient.createEntry(entry, bytes) }
+			runSuspendCatching { diaryClient.createEntry(entry, bytes) }
 				.onFailure { e -> baseState.update { it.copy(error = e.message) } }
 			baseState.update { it.copy(pendingRecording = null, pendingTitle = "") }
 		}
@@ -132,7 +133,7 @@ class MainViewModel(
 
 	fun deleteEntry(entry: UiVoiceDiaryEntry) {
 		viewModelScope.launch {
-			runCatching { diaryClient.deleteEntry(entry.id) }
+			runSuspendCatching { diaryClient.deleteEntry(entry.id) }
 				.onFailure { e -> baseState.update { it.copy(error = e.message) } }
 		}
 	}
@@ -140,7 +141,7 @@ class MainViewModel(
 	fun transcribe(entry: UiVoiceDiaryEntry) {
 		val transcriber = transcriber ?: return
 		viewModelScope.launch {
-			runCatching {
+			runSuspendCatching {
 				val bytes = diaryClient.getAudio(entry.id)
 				val buffer = Buffer().apply { write(bytes) }
 				val text = transcriber.transcribe(buffer)
@@ -154,7 +155,7 @@ class MainViewModel(
 				)
 			}.onFailure { e ->
 				baseState.update { it.copy(error = e.message) }
-				runCatching {
+				runSuspendCatching {
 					diaryClient.updateTranscription(
 						entry.id,
 						UpdateTranscriptionRequest(
