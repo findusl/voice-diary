@@ -41,9 +41,8 @@ tasks.register("checkAgentsEnvironment") {
 		":shared:testDebugUnitTest",
 		":shared:testReleaseUnitTest",
 		":server:test",
-		"ktlintCheck",
-		":composeApp:detekt",
-		":shared:detekt",
-		":server:detekt",
 	)
+	// Also depend on ktlintCheck in every subproject, not just the root project
+	dependsOn(subprojects.map { "${it.path}:ktlintCheck" })
+	dependsOn(subprojects.map { "${it.path}:detekt" })
 }
