@@ -182,21 +182,16 @@ private fun EntryRow(
 	)
 	HorizontalDivider()
 	if (showDeleteDialog) {
-		AlertDialog(
-			onDismissRequest = { showDeleteDialog = false },
-			title = { Text("Delete entry?") },
-			text = { Text("Are you sure you want to delete this entry?") },
-			confirmButton = {
-				TextButton(
-					onClick = {
-						showDeleteDialog = false
-						onDeleteClick()
-					},
-				) { Text("Delete") }
+		ConfirmationDialog(
+			title = "Delete entry?",
+			text = "Are you sure you want to delete this entry?",
+			confirmText = "Delete",
+			dismissText = "Cancel",
+			onConfirm = {
+				showDeleteDialog = false
+				onDeleteClick()
 			},
-			dismissButton = {
-				TextButton(onClick = { showDeleteDialog = false }) { Text("Cancel") }
-			},
+			onDismiss = { showDeleteDialog = false },
 		)
 	}
 }

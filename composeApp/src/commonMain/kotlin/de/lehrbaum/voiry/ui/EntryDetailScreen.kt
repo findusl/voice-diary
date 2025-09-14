@@ -8,7 +8,6 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.OutlinedTextField
@@ -147,21 +146,16 @@ fun EntryDetailScreen(
 		}
 	}
 	if (showDeleteDialog) {
-		AlertDialog(
-			onDismissRequest = { showDeleteDialog = false },
-			title = { Text("Delete entry?") },
-			text = { Text("Are you sure you want to delete this entry?") },
-			confirmButton = {
-				TextButton(
-					onClick = {
-						showDeleteDialog = false
-						viewModel.delete(onBack)
-					},
-				) { Text("Delete") }
+		ConfirmationDialog(
+			title = "Delete entry?",
+			text = "Are you sure you want to delete this entry?",
+			confirmText = "Delete",
+			dismissText = "Cancel",
+			onConfirm = {
+				showDeleteDialog = false
+				viewModel.delete(onBack)
 			},
-			dismissButton = {
-				TextButton(onClick = { showDeleteDialog = false }) { Text("Cancel") }
-			},
+			onDismiss = { showDeleteDialog = false },
 		)
 	}
 }
