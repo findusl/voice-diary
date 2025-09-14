@@ -235,7 +235,7 @@ class MainScreenTest {
 
 			onAllNodesWithText("Delete")[0].performClick()
 			waitUntilAtLeastOneExists(hasText("Delete entry?"))
-			onAllNodesWithText("Delete")[1].performClick()
+			onAllNodesWithText("Delete")[3].performClick()
 			waitUntilDoesNotExist(hasText("Recording 1"))
 		}
 
