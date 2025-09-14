@@ -32,8 +32,20 @@ import de.lehrbaum.voiry.audio.platformPlayer
 import kotlin.time.ExperimentalTime
 import kotlin.uuid.ExperimentalUuidApi
 import kotlin.uuid.Uuid
+import kotlinx.datetime.LocalDate
+import kotlinx.datetime.LocalDateTime
 import kotlinx.datetime.TimeZone
+import kotlinx.datetime.format
+import kotlinx.datetime.format.char
 import kotlinx.datetime.toLocalDateTime
+
+private val SIMPLE_FORMAT = LocalDateTime.Format {
+	date(LocalDate.Formats.ISO)
+	char(' ')
+	hour()
+	char(':')
+	minute()
+}
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalUuidApi::class, ExperimentalTime::class, ExperimentalLayoutApi::class)
 @Composable
@@ -74,23 +86,7 @@ fun EntryDetailScreen(
 			verticalArrangement = Arrangement.spacedBy(12.dp),
 		) {
 			val recordedAtFormatted =
-				kotlinx.datetime.Instant
-					.fromEpochMilliseconds(
-						entry.recordedAt.toEpochMilliseconds(),
-					).toLocalDateTime(TimeZone.currentSystemDefault())
-					.run {
-						buildString {
-							append(year)
-							append('-')
-							append(monthNumber.toString().padStart(2, '0'))
-							append('-')
-							append(dayOfMonth.toString().padStart(2, '0'))
-							append(' ')
-							append(hour.toString().padStart(2, '0'))
-							append(':')
-							append(minute.toString().padStart(2, '0'))
-						}
-					}
+				entry.recordedAt.toLocalDateTime(TimeZone.currentSystemDefault()).format(SIMPLE_FORMAT)
 			Text("Recorded at: $recordedAtFormatted")
 			if (state.isEditing) {
 				OutlinedTextField(
