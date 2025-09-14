@@ -8,6 +8,7 @@ import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.hasSetTextAction
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.isNotEnabled
+import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performTextClearance
@@ -219,8 +220,9 @@ class EntryDetailScreenTest {
 			}
 
 			waitUntilAtLeastOneExists(hasText("Delete"))
-
 			onNodeWithText("Delete").performClick()
+			waitUntilAtLeastOneExists(hasText("Delete entry?"))
+			onAllNodesWithText("Delete")[1].performClick()
 			waitUntilDoesNotExist(hasText("Delete"))
 			assert(backCalled)
 			assert(clientMock.entries.value.isEmpty())
@@ -261,8 +263,9 @@ class EntryDetailScreenTest {
 			}
 
 			waitUntilAtLeastOneExists(hasText("Delete"))
-
 			onNodeWithText("Delete").performClick()
+			waitUntilAtLeastOneExists(hasText("Delete entry?"))
+			onAllNodesWithText("Delete")[1].performClick()
 			waitUntilAtLeastOneExists(hasText("Error: fail delete"))
 			assert(!backCalled)
 			assert(clientMock.entries.value.isNotEmpty())

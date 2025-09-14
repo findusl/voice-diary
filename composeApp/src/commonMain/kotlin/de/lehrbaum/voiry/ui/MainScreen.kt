@@ -25,7 +25,9 @@ import androidx.compose.material3.TextField
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
@@ -161,6 +163,7 @@ private fun EntryRow(
 ) {
 	val onDeleteClick = remember(entry.id, onDelete) { { onDelete(entry) } }
 	val onTranscribeClick = remember(entry.id, onTranscribe) { { onTranscribe(entry) } }
+	var showDeleteDialog by remember { mutableStateOf(false) }
 	ListItem(
 		modifier = Modifier.fillMaxWidth().clickable { onClick() },
 		headlineContent = { Text(entry.title) },
@@ -173,11 +176,24 @@ private fun EntryRow(
 					transcriber = transcriber,
 					onTranscribe = onTranscribeClick,
 				)
-				TextButton(onClick = onDeleteClick) { Text("Delete") }
+				TextButton(onClick = { showDeleteDialog = true }) { Text("Delete") }
 			}
 		},
 	)
 	HorizontalDivider()
+	if (showDeleteDialog) {
+		ConfirmationDialog(
+			title = "Delete entry?",
+			text = "Are you sure you want to delete this entry?",
+			confirmText = "Delete",
+			dismissText = "Cancel",
+			onConfirm = {
+				showDeleteDialog = false
+				onDeleteClick()
+			},
+			onDismiss = { showDeleteDialog = false },
+		)
+	}
 }
 
 @Composable
