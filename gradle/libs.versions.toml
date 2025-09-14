@@ -9,6 +9,9 @@ composeHotReload = "1.0.0-beta06"
 composeMultiplatform = "1.8.2"
 junit = "4.13.2"
 kotlin = "2.2.20"
+ksp = "2.2.20-2.0.3"
+kotlinx-sqlite = "2.6.0"
+room = "2.8.0"
 kotlinx-coroutines = "1.10.2"
 kotlinxIoCore = "0.8.0"
 ktor = "3.2.3"
@@ -57,6 +60,10 @@ appdirs = { module = "ca.gosyer:kotlin-multiplatform-appdirs", version.ref = "ap
 lexilabs-basic-sound = { module = "app.lexilabs.basic:basic-sound", version.ref = "lexilabs-basic" }
 kotlinx-datetime = { module = "org.jetbrains.kotlinx:kotlinx-datetime", version.ref = "kotlinx-datetime" }
 kotlinx-collections-immutable = { module = "org.jetbrains.kotlinx:kotlinx-collections-immutable", version.ref = "kotlinx-collections-immutable" }
+androidx-sqlite-bundled = { module = "androidx.sqlite:sqlite-bundled", version.ref = "kotlinx-sqlite" }
+androidx-room-runtime = { module = "androidx.room:room-runtime", version.ref = "room" }
+androidx-room-compiler = { module = "androidx.room:room-compiler", version.ref = "room" }
+androidx-room-sqlite-wrapper = { module = "androidx.room:room-sqlite-wrapper", version.ref = "room" }
 
 [plugins]
 androidApplication = { id = "com.android.application", version.ref = "agp" }
@@ -72,3 +79,5 @@ detekt = { id = "io.gitlab.arturbosch.detekt", version.ref = "detekt" }
 mokkery = { id = "dev.mokkery", version.ref = "mokkery" }
 kotlinSerialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlin" }
 buildkonfig = { id = "com.codingfeline.buildkonfig", version.ref = "buildkonfig" }
+ksp = { id = "com.google.devtools.ksp", version.ref = "ksp" }
+androidx-room = { id = "androidx.room", version.ref = "room" }
