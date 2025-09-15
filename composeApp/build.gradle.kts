@@ -1,5 +1,6 @@
 import buildsrc.markBuiltInClassesAsStable
 import com.codingfeline.buildkonfig.compiler.FieldSpec.Type.STRING
+import com.google.devtools.ksp.gradle.KspTask
 import java.util.Properties
 import org.jetbrains.compose.ExperimentalComposeLibrary
 import org.jetbrains.compose.desktop.application.dsl.TargetFormat
@@ -15,6 +16,8 @@ plugins {
 	alias(libs.plugins.kotlinSerialization)
 	alias(libs.plugins.mokkery)
 	alias(libs.plugins.buildkonfig)
+	alias(libs.plugins.ksp)
+	alias(libs.plugins.androidx.room)
 }
 
 val localProps = Properties().apply {
@@ -53,6 +56,7 @@ kotlin {
 		androidMain.dependencies {
 			implementation(compose.preview)
 			implementation(libs.androidx.activity.compose)
+			implementation(libs.androidx.room.sqlite.wrapper)
 		}
 		commonMain.dependencies {
 			implementation(projects.shared)
@@ -75,6 +79,8 @@ kotlin {
 			implementation(libs.kotlinx.datetime)
 			implementation(libs.kotlinx.collections.immutable)
 			implementation(libs.appdirs)
+			implementation(libs.androidx.room.runtime)
+			implementation(libs.androidx.sqlite.bundled)
 		}
 		commonTest.dependencies {
 			implementation(libs.kotlin.test)
@@ -139,6 +145,10 @@ android {
 	}
 }
 
+room {
+	schemaDirectory("$projectDir/schemas")
+}
+
 composeCompiler {
 	reportsDestination = layout.buildDirectory.dir("compose_compiler")
 	metricsDestination = layout.buildDirectory.dir("compose_compiler")
@@ -146,6 +156,8 @@ composeCompiler {
 
 dependencies {
 	debugImplementation(compose.uiTooling)
+	add("kspAndroid", libs.androidx.room.compiler)
+	add("kspJvm", libs.androidx.room.compiler)
 }
 
 compose.desktop {
@@ -157,5 +169,15 @@ compose.desktop {
 			packageName = "de.lehrbaum.voiry"
 			packageVersion = "1.0.0"
 		}
+	}
+
+	tasks.withType<KspTask>().configureEach {
+		dependsOn("generateResourceAccessorsForAndroidDebug")
+		dependsOn("generateResourceAccessorsForAndroidMain")
+		dependsOn("generateActualResourceCollectorsForAndroidMain")
+		dependsOn("generateComposeResClass")
+		dependsOn("generateResourceAccessorsForCommonMain")
+		dependsOn("generateExpectResourceCollectorsForCommonMain")
+		dependsOn("generateBuildKonfig")
 	}
 }
