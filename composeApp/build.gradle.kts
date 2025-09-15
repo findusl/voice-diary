@@ -97,6 +97,11 @@ kotlin {
 			implementation(libs.logback)
 			implementation(libs.mokkery.runtime)
 		}
+		androidInstrumentedTest.dependencies {
+			implementation(libs.androidx.test.core)
+			implementation(libs.androidx.test.ext.junit)
+			implementation(libs.androidx.test.runner)
+		}
 	}
 }
 
@@ -122,6 +127,7 @@ android {
 		targetSdk = libs.versions.android.targetSdk.get().toInt()
 		versionCode = 1
 		versionName = "1.0"
+		testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 	}
 	packaging {
 		resources {
