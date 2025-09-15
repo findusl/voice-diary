@@ -1,6 +1,7 @@
 import buildsrc.markBuiltInClassesAsStable
 import com.codingfeline.buildkonfig.compiler.FieldSpec.Type.STRING
 import java.util.Properties
+import org.jetbrains.compose.ComposePlugin
 import org.jetbrains.compose.ExperimentalComposeLibrary
 import org.jetbrains.compose.desktop.application.dsl.TargetFormat
 import org.jetbrains.kotlin.gradle.ExperimentalKotlinGradlePluginApi
@@ -97,6 +98,10 @@ kotlin {
 			implementation(libs.logback)
 			implementation(libs.mokkery.runtime)
 		}
+		androidInstrumentedTest.dependencies {
+			implementation(compose.uiTest)
+			implementation(libs.androidx.test.ext.junit)
+		}
 	}
 }
 
@@ -144,9 +149,14 @@ composeCompiler {
 	metricsDestination = layout.buildDirectory.dir("compose_compiler")
 }
 
+@OptIn(ExperimentalComposeLibrary::class)
 dependencies {
 	debugImplementation(compose.uiTooling)
+	debugImplementation(compose.uiTestManifest)
 }
+
+val ComposePlugin.Dependencies.uiTestManifest
+	get() = "androidx.compose.ui:ui-test-manifest"
 
 compose.desktop {
 	application {
