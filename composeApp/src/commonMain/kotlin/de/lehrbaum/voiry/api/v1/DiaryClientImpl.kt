@@ -48,6 +48,8 @@ import kotlinx.coroutines.flow.runningFold
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.isActive
 import kotlinx.serialization.json.Json
+import yairm210.purity.annotations.Pure
+import yairm210.purity.annotations.Readonly
 
 /**
  * Client for communicating with the voice diary server.
@@ -181,6 +183,7 @@ class DiaryClientImpl(
 		return bytes
 	}
 
+	@Readonly
 	private suspend fun throwIfFailed(response: HttpResponse) {
 		if (!response.status.isSuccess()) {
 			val text = response.bodyAsText()
@@ -192,6 +195,7 @@ class DiaryClientImpl(
 		}
 	}
 
+	@Pure
 	private fun applyEvent(list: PersistentList<VoiceDiaryEntry>, event: DiaryEvent): PersistentList<VoiceDiaryEntry> =
 		when (event) {
 			is DiaryEvent.EntriesSnapshot -> event.entries.toPersistentList()

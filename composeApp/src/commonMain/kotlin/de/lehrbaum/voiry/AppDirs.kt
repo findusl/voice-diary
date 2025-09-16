@@ -1,13 +1,12 @@
 package de.lehrbaum.voiry
 
 import ca.gosyer.appdirs.AppDirs
+import yairm210.purity.annotations.Readonly
 
-fun voiceDiaryCacheDir(): String {
-	val appDirs = AppDirs { appName = "voice-diary" }
-	return appDirs.getUserCacheDir()
-}
+private val voiceDiaryAppDirs = AppDirs { appName = "voice-diary" }
 
-fun voiceDiaryDataDir(): String {
-	val appDirs = AppDirs { appName = "voice-diary" }
-	return appDirs.getUserDataDir()
-}
+@Readonly
+fun voiceDiaryCacheDir(): String = voiceDiaryAppDirs.getUserCacheDir()
+
+@Readonly
+fun voiceDiaryDataDir(): String = voiceDiaryAppDirs.getUserDataDir()

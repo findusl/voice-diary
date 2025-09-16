@@ -15,6 +15,7 @@ plugins {
 	alias(libs.plugins.kotlinSerialization)
 	alias(libs.plugins.mokkery)
 	alias(libs.plugins.buildkonfig)
+	alias(libs.plugins.purity)
 }
 
 val localProps = Properties().apply {
@@ -75,6 +76,7 @@ kotlin {
 			implementation(libs.kotlinx.datetime)
 			implementation(libs.kotlinx.collections.immutable)
 			implementation(libs.appdirs)
+			implementation(libs.purity.annotations)
 		}
 		commonTest.dependencies {
 			implementation(libs.kotlin.test)
