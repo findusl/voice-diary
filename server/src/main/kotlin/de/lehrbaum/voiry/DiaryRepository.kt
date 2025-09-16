@@ -24,6 +24,7 @@ import org.jetbrains.exposed.sql.selectAll
 import org.jetbrains.exposed.sql.transactions.experimental.newSuspendedTransaction
 import org.jetbrains.exposed.sql.transactions.transaction
 import org.jetbrains.exposed.sql.update
+import yairm210.purity.annotations.Pure
 
 private const val STATUS_NAME_MAX_LENGTH = 20 // Maximum TranscriptionStatus name length
 
@@ -135,4 +136,5 @@ class DiaryRepository(private val baseDir: Path) {
 }
 
 @ExperimentalTime
+@Pure
 private fun Long.epochMillisToInstant() = Instant.fromEpochMilliseconds(this)
