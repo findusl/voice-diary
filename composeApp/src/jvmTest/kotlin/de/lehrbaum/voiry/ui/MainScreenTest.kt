@@ -7,6 +7,7 @@ import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.onAllNodesWithText
+import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performTextInput
@@ -31,6 +32,7 @@ import dev.mokkery.every
 import dev.mokkery.everySuspend
 import dev.mokkery.matcher.any
 import dev.mokkery.mock
+import kotlin.test.assertEquals
 import kotlin.time.Clock
 import kotlin.time.Duration
 import kotlin.time.ExperimentalTime
@@ -39,6 +41,11 @@ import kotlin.uuid.Uuid
 import kotlinx.collections.immutable.PersistentList
 import kotlinx.collections.immutable.toPersistentList
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.datetime.LocalDate
+import kotlinx.datetime.TimeZone
+import kotlinx.datetime.atStartOfDayIn
+import kotlinx.datetime.format
+import kotlinx.datetime.toLocalDateTime
 import kotlinx.io.Buffer
 import kotlinx.io.writeString
 import org.junit.Test
@@ -208,6 +215,66 @@ class MainScreenTest {
 		}
 
 	@Test
+	fun changing_recording_date_updates_saved_entry() =
+		runComposeUiTest {
+			val timeZone = TimeZone.currentSystemDefault()
+			val dateFormat = LocalDate.Format { date(LocalDate.Formats.ISO) }
+			var savedEntry: VoiceDiaryEntry? = null
+			val clientMock = diaryClientMock(onCreateEntry = { savedEntry = it })
+			val client = clientMock.client
+			val buffer = Buffer().apply { writeString("new bytes") }
+			val recorder = mock<Recorder>()
+			every { recorder.isAvailable } returns true
+			every { recorder.startRecording() } returns Unit
+			every { recorder.stopRecording() } returns Result.success(buffer)
+			val viewModel = MainViewModel(
+				diaryClient = client,
+				recorder = recorder,
+				transcriber = null,
+			)
+
+			setContent {
+				CompositionLocalProvider(
+					LocalLifecycleOwner provides FakeLifecycleOwner(),
+					LocalViewModelStoreOwner provides FakeViewModelStoreOwner(),
+				) {
+					MaterialTheme {
+						MainScreen(
+							viewModel = viewModel,
+							transcriber = null,
+							onEntryClick = { },
+						)
+					}
+				}
+			}
+
+			onNodeWithText("Record").performClick()
+			waitUntilAtLeastOneExists(hasText("Stop"))
+
+			onNodeWithText("Stop").performClick()
+			waitUntilAtLeastOneExists(hasText("Title"))
+
+			onNodeWithTag("saveRecordingDateButton").assertIsDisplayed()
+
+			val initialDate = Clock.System.now().toLocalDateTime(timeZone).date
+			val desiredDay = if (initialDate.day != 15) 15 else 16
+			val desiredDate = LocalDate(initialDate.year, initialDate.month, desiredDay)
+			val desiredDateText = desiredDate.format(dateFormat)
+			val desiredDateMillis = desiredDate.atStartOfDayIn(TimeZone.UTC).toEpochMilliseconds()
+
+			viewModel.updatePendingRecordedDate(desiredDateMillis)
+
+			waitUntilAtLeastOneExists(hasText(desiredDateText))
+
+			onNodeWithText("Title").performTextInput("Backdated entry")
+			onNodeWithText("Save").performClick()
+
+			waitUntilAtLeastOneExists(hasText("Backdated entry"))
+			val savedDate = checkNotNull(savedEntry).recordedAt.toLocalDateTime(timeZone).date
+			assertEquals(desiredDate, savedDate)
+		}
+
+	@Test
 	fun delete_removes_item_from_list() =
 		runComposeUiTest {
 			val clientMock = diaryClientMock()
@@ -301,6 +368,7 @@ private fun diaryClientMock(
 		)
 	}.toPersistentList(),
 	connectionErrors: List<String> = emptyList(),
+	onCreateEntry: ((VoiceDiaryEntry) -> Unit)? = null,
 ): DiaryClientMock {
 	val pendingErrors = ArrayDeque(connectionErrors)
 	val connectionErrorFlow = MutableStateFlow(pendingErrors.removeFirstOrNull())
@@ -309,6 +377,7 @@ private fun diaryClientMock(
 		every { entries } returns entriesFlow
 		every { connectionError } returns connectionErrorFlow
 		everySuspend { createEntry(any(), any()) } calls { (entry: VoiceDiaryEntry, _: ByteArray) ->
+			onCreateEntry?.invoke(entry)
 			val withTranscript = entry.copy(
 				transcriptionText = "Transcript for ${entry.title}",
 				transcriptionStatus = TranscriptionStatus.DONE,
