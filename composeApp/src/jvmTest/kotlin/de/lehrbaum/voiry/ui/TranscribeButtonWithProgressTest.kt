@@ -143,7 +143,7 @@ private class FakeProgressTranscriber(initial: Float? = 0.5f) : Transcriber {
 
 	override suspend fun initialize() {}
 
-	override suspend fun transcribe(buffer: Buffer): String = ""
+	override suspend fun transcribe(buffer: Buffer, initialPrompt: String?): String = ""
 }
 
 @OptIn(ExperimentalTime::class, ExperimentalUuidApi::class)

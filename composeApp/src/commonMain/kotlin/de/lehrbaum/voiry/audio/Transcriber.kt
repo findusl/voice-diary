@@ -15,6 +15,8 @@ interface Transcriber {
 	/**
 	 * Transcribes the given [buffer] and returns plain text.
 	 * Implementations may suspend while invoking platform services.
+	 *
+	 * @param initialPrompt Optional text prompt that can steer the transcription.
 	 */
-	suspend fun transcribe(buffer: Buffer): String
+	suspend fun transcribe(buffer: Buffer, initialPrompt: String? = null): String
 }
