@@ -368,5 +368,5 @@ private class ReadyTranscriber : Transcriber {
 
 	override suspend fun initialize() {}
 
-	override suspend fun transcribe(buffer: Buffer): String = ""
+	override suspend fun transcribe(buffer: Buffer, initialPrompt: String?): String = ""
 }

@@ -189,7 +189,8 @@ class MainViewModel(
 			runSuspendCatching {
 				val bytes = diaryClient.getAudio(entry.id)
 				val buffer = Buffer().apply { write(bytes) }
-				val text = transcriber.transcribe(buffer)
+				val prompt = initialPromptFromTitle(entry.title)
+				val text = transcriber.transcribe(buffer, prompt)
 				diaryClient.updateTranscription(
 					entry.id,
 					UpdateTranscriptionRequest(

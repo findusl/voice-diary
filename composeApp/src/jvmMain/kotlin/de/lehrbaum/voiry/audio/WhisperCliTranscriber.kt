@@ -2,6 +2,7 @@ package de.lehrbaum.voiry.audio
 
 import io.github.aakira.napier.Napier
 import java.io.File
+import kotlin.collections.buildList
 import kotlin.io.path.createTempFile
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -35,7 +36,7 @@ class WhisperCliTranscriber(
 		modelManager.initialize()
 	}
 
-	override suspend fun transcribe(buffer: Buffer): String =
+	override suspend fun transcribe(buffer: Buffer, initialPrompt: String?): String =
 		withContext(Dispatchers.IO) {
 			val tmp = createTempFile(prefix = "voice-diary", suffix = ".wav").toFile()
 			val jsonFile = File(tmp.absolutePath + ".json")
@@ -65,16 +66,25 @@ class WhisperCliTranscriber(
 					throw RuntimeException("whisper-cli failed with exit code ${detectResult.exitCode}")
 				}
 
-				val command = listOf(
-					"whisper-cli",
-					"--model",
-					modelManager.modelPath.toString(),
-					"--file",
-					tmp.absolutePath,
-					"--language",
-					language,
-					"--output-json",
-				)
+				val prompt = initialPrompt?.takeIf { it.isNotBlank() }
+				val command = buildList {
+					addAll(
+						listOf(
+							"whisper-cli",
+							"--model",
+							modelManager.modelPath.toString(),
+							"--file",
+							tmp.absolutePath,
+							"--language",
+							language,
+							"--output-json",
+						),
+					)
+					if (prompt != null) {
+						add("--initial-prompt")
+						add(prompt)
+					}
+				}
 				Napier.d("Running: ${command.joinToString(" ")}", tag = TAG)
 				val exit = processRunner(command)
 				if (exit.exitCode != 0) {
