@@ -1,13 +1,15 @@
 package de.lehrbaum.voiry.ui
 
 import de.lehrbaum.voiry.api.v1.DiaryClient
-import de.lehrbaum.voiry.api.v1.UpdateTranscriptionRequest
 import de.lehrbaum.voiry.api.v1.VoiceDiaryEntry
 import de.lehrbaum.voiry.audio.Recorder
+import dev.mokkery.MockMode
+import dev.mokkery.answering.returns
+import dev.mokkery.every
+import dev.mokkery.mock
 import kotlin.test.assertEquals
 import kotlin.time.ExperimentalTime
 import kotlin.uuid.ExperimentalUuidApi
-import kotlin.uuid.Uuid
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.first
@@ -19,7 +21,6 @@ import kotlinx.datetime.TimeZone
 import kotlinx.datetime.atStartOfDayIn
 import kotlinx.datetime.toInstant
 import kotlinx.datetime.toLocalDateTime
-import kotlinx.io.Buffer
 import org.junit.Test
 
 @OptIn(ExperimentalTime::class)
@@ -83,40 +84,20 @@ class MainViewModelTest {
 		}
 }
 
-@OptIn(ExperimentalUuidApi::class, ExperimentalTime::class)
-private fun createViewModel(): MainViewModel =
-	MainViewModel(
-		diaryClient = FakeDiaryClient(),
-		recorder = AvailableRecorder(),
+@OptIn(ExperimentalUuidApi::class)
+private fun createViewModel(): MainViewModel {
+	val diaryClient = mock<DiaryClient>()
+	every { diaryClient.connectionError } returns MutableStateFlow<String?>(null)
+	every { diaryClient.entries } returns MutableStateFlow(persistentListOf<VoiceDiaryEntry>())
+
+	val recorder = mock<Recorder>(mode = MockMode.autoUnit)
+	every { recorder.isAvailable } returns true
+
+	return MainViewModel(
+		diaryClient = diaryClient,
+		recorder = recorder,
 		transcriber = null,
 	)
-
-private class AvailableRecorder : Recorder {
-	override val isAvailable: Boolean = true
-
-	override fun startRecording() = Unit
-
-	override fun stopRecording(): Result<Buffer> = Result.failure(UnsupportedOperationException("Not used in tests"))
-
-	override fun close() = Unit
-}
-
-@OptIn(ExperimentalUuidApi::class, ExperimentalTime::class)
-private class FakeDiaryClient : DiaryClient {
-	override val connectionError = MutableStateFlow<String?>(null)
-	override val entries = MutableStateFlow(persistentListOf<VoiceDiaryEntry>())
-
-	override fun entryFlow(id: Uuid) = MutableStateFlow<VoiceDiaryEntry?>(null)
-
-	override suspend fun createEntry(entry: VoiceDiaryEntry, audio: ByteArray) = entry
-
-	override suspend fun updateTranscription(id: Uuid, request: UpdateTranscriptionRequest) = Unit
-
-	override suspend fun deleteEntry(id: Uuid) = Unit
-
-	override suspend fun getAudio(id: Uuid): ByteArray = ByteArray(0)
-
-	override fun close() = Unit
 }
 
 private fun <T> withTimeZone(id: String, block: (TimeZone) -> T): T {
