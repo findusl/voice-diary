@@ -19,7 +19,14 @@ class WhisperCliTranscriber(
 	override val modelManager: WhisperModelManager = WhisperModelManager(),
 	private val processRunner: (List<String>) -> ProcessResult = { command ->
 		val process = ProcessBuilder(command).redirectErrorStream(true).start()
-		val output = process.inputStream.bufferedReader().readText()
+		val output = buildString {
+			process.inputStream.bufferedReader().useLines { lines ->
+				lines.forEach { line ->
+					Napier.v(line, tag = TAG)
+					appendLine(line)
+				}
+			}
+		}
 		val exit = process.waitFor()
 		ProcessResult(exit, output)
 	},
