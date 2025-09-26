@@ -38,13 +38,13 @@ class WhisperCliTranscriberTest {
 			val transcript = transcriber.transcribe(buffer, prompt)
 			assertEquals("Hello World", transcript)
 			assertTrue(commands[0].contains("--detect-language"))
-			assertTrue(commands[0].none { it == "--initial-prompt" })
+			assertTrue(commands[0].none { it == "--prompt" })
 			val cmd = commands[1]
 			assertTrue(cmd.contains("--file"))
 			val path = cmd[cmd.indexOf("--file") + 1]
 			assertTrue(path.endsWith(".wav"))
 			assertTrue(cmd.containsAll(listOf("--language", "en")))
-			val promptIndex = cmd.indexOf("--initial-prompt")
+			val promptIndex = cmd.indexOf("--prompt")
 			assertTrue(promptIndex >= 0)
 			assertEquals(prompt, cmd[promptIndex + 1])
 		}
