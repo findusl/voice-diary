@@ -81,7 +81,7 @@ class WhisperCliTranscriber(
 						),
 					)
 					if (prompt != null) {
-						add("--initial-prompt")
+						add("--prompt")
 						add(prompt)
 					}
 				}
