@@ -117,11 +117,12 @@ class EntryDetailViewModel(
 			_uiState.update { it.copy(error = "Transcriber unavailable") }
 			return
 		}
+		val prompt = initialPromptFromTitle(_uiState.value.entry?.title)
 		val audio = _uiState.value.audio
 		if (audio == null) {
 			downloadAudio { data ->
 				viewModelScope.launch {
-					transcribeEntry(diaryClient, t, entryId, data)
+					transcribeEntry(diaryClient, t, entryId, data, prompt)
 						.onFailure { e ->
 							_uiState.update { it.copy(error = e.message) }
 						}
@@ -129,7 +130,7 @@ class EntryDetailViewModel(
 			}
 		} else {
 			viewModelScope.launch {
-				transcribeEntry(diaryClient, t, entryId, audio)
+				transcribeEntry(diaryClient, t, entryId, audio, prompt)
 					.onFailure { e -> _uiState.update { it.copy(error = e.message) } }
 			}
 		}
@@ -174,10 +175,11 @@ private suspend fun transcribeEntry(
 	transcriber: Transcriber,
 	entryId: Uuid,
 	audio: ByteArray,
+	prompt: String?,
 ): Result<Unit> =
 	runSuspendCatching {
 		val buffer = Buffer().apply { write(audio) }
-		val text = transcriber.transcribe(buffer)
+		val text = transcriber.transcribe(buffer, prompt)
 		diaryClient.updateTranscription(
 			entryId,
 			UpdateTranscriptionRequest(
