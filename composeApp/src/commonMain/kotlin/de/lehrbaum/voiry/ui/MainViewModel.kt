@@ -3,13 +3,13 @@ package de.lehrbaum.voiry.ui
 import androidx.compose.runtime.Immutable
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import de.lehrbaum.voicerecorder.Recorder
+import de.lehrbaum.voicerecorder.platformRecorder
 import de.lehrbaum.voiry.api.v1.DiaryClient
 import de.lehrbaum.voiry.api.v1.TranscriptionStatus
 import de.lehrbaum.voiry.api.v1.UpdateTranscriptionRequest
 import de.lehrbaum.voiry.api.v1.VoiceDiaryEntry
-import de.lehrbaum.voiry.audio.Recorder
 import de.lehrbaum.voiry.audio.Transcriber
-import de.lehrbaum.voiry.audio.platformRecorder
 import de.lehrbaum.voiry.runSuspendCatching
 import io.github.aakira.napier.Napier
 import java.io.Closeable

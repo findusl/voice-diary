@@ -1,4 +1,4 @@
-package de.lehrbaum.voiry.audio
+package de.lehrbaum.voicerecorder
 
 import javax.sound.sampled.AudioSystem
 import javax.sound.sampled.DataLine
