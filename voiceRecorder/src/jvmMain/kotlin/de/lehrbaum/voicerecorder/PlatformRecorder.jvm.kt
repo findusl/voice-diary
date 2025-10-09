@@ -1,4 +1,4 @@
-package de.lehrbaum.voiry.audio
+package de.lehrbaum.voicerecorder
 
 import java.util.Locale
 

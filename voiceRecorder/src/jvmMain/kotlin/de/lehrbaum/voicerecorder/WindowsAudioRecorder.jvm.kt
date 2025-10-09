@@ -1,4 +1,4 @@
-package de.lehrbaum.voiry.audio
+package de.lehrbaum.voicerecorder
 
 import io.github.aakira.napier.Napier
 import javax.sound.sampled.AudioFormat

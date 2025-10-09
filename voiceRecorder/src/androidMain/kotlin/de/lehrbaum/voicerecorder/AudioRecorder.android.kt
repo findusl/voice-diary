@@ -1,4 +1,4 @@
-package de.lehrbaum.voiry.audio
+package de.lehrbaum.voicerecorder
 
 import android.media.AudioFormat
 import android.media.AudioRecord
