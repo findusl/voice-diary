@@ -1,3 +1,3 @@
-package de.lehrbaum.voiry.audio
+package de.lehrbaum.voicerecorder
 
 actual val platformRecorder: Recorder by lazy { AudioRecorder() }

@@ -1,3 +1,3 @@
-package de.lehrbaum.voiry.audio
+package de.lehrbaum.voicerecorder
 
 expect val platformRecorder: Recorder
