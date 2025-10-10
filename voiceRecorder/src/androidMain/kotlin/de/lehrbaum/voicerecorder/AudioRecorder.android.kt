@@ -1,8 +1,10 @@
 package de.lehrbaum.voicerecorder
 
+import android.Manifest
 import android.media.AudioFormat
 import android.media.AudioRecord
 import android.media.MediaRecorder
+import androidx.annotation.RequiresPermission
 import io.github.aakira.napier.Napier
 import java.io.ByteArrayOutputStream
 import java.util.concurrent.atomic.AtomicBoolean
@@ -37,6 +39,7 @@ class AudioRecorder : Recorder {
 		isAvailable = available
 	}
 
+	@RequiresPermission(Manifest.permission.RECORD_AUDIO)
 	override fun startRecording() {
 		if (!isAvailable) throw IllegalStateException("Audio recorder not available")
 		if (isRecording.get()) throw IllegalStateException("Already recording")
