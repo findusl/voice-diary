@@ -10,6 +10,9 @@ kotlin {
 	jvm()
 
 	sourceSets {
+		androidMain.dependencies {
+			implementation(libs.androidx.annotation)
+		}
 		commonMain.dependencies {
 			implementation(libs.kotlinx.io.core)
 			implementation(libs.kotlinx.coroutinesCore)
