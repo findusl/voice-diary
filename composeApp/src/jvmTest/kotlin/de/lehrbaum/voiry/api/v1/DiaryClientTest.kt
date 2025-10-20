@@ -37,6 +37,7 @@ import kotlin.test.assertTrue
 import kotlin.time.Clock
 import kotlin.time.Duration.Companion.seconds
 import kotlin.time.ExperimentalTime
+import kotlin.time.Instant
 import kotlin.uuid.ExperimentalUuidApi
 import kotlin.uuid.Uuid
 import kotlinx.coroutines.CoroutineScope
@@ -74,6 +75,35 @@ class DiaryClientTest {
 				service.addEntry(entry, ByteArray(0))
 				val entries = entriesDeferred.await()
 				assertEquals(1, entries.size)
+			}
+		}
+
+	@Test
+	fun `client deduplicates snapshot entries`() =
+		testApplication {
+			val entry = sampleEntry(Uuid.random())
+			val service = object : DiaryService {
+				override fun eventFlow() = flowOf(DiaryEvent.EntriesSnapshot(listOf(entry, entry)))
+
+				override suspend fun addEntry(entry: VoiceDiaryEntry, audio: ByteArray) { }
+
+				override suspend fun deleteEntry(id: Uuid) { }
+
+				override suspend fun updateTranscription(
+					id: Uuid,
+					transcriptionText: String?,
+					transcriptionStatus: TranscriptionStatus,
+					transcriptionUpdatedAt: Instant?,
+				) { }
+
+				override suspend fun getAudio(id: Uuid): ByteArray? = null
+			}
+
+			application { module(service) }
+
+			createDiaryClientAgainstMockKtorApplication().use { client: DiaryClient ->
+				val entries = client.entries.filter { it.isNotEmpty() }.first()
+				assertEquals(listOf(entry), entries)
 			}
 		}
 

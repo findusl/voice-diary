@@ -31,6 +31,7 @@ import kotlin.uuid.ExperimentalUuidApi
 import kotlin.uuid.Uuid
 import kotlinx.collections.immutable.PersistentList
 import kotlinx.collections.immutable.persistentListOf
+import kotlinx.collections.immutable.persistentSetOf
 import kotlinx.collections.immutable.toPersistentList
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -48,7 +49,6 @@ import kotlinx.coroutines.flow.runningFold
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.isActive
 import kotlinx.serialization.json.Json
-import yairm210.purity.annotations.Pure
 import yairm210.purity.annotations.Readonly
 
 /**
@@ -195,10 +195,19 @@ class DiaryClientImpl(
 		}
 	}
 
-	@Pure
 	private fun applyEvent(list: PersistentList<VoiceDiaryEntry>, event: DiaryEvent): PersistentList<VoiceDiaryEntry> =
 		when (event) {
-			is DiaryEvent.EntriesSnapshot -> event.entries.toPersistentList()
+			is DiaryEvent.EntriesSnapshot -> {
+				var seenIds = persistentSetOf<Uuid>()
+				var dedupedEntries = persistentListOf<VoiceDiaryEntry>()
+				for (entry in event.entries) {
+					if (entry.id !in seenIds) {
+						seenIds = seenIds.add(entry.id)
+						dedupedEntries = dedupedEntries.add(entry)
+					}
+				}
+				dedupedEntries
+			}
 			is DiaryEvent.EntryCreated ->
 				if (list.any { it.id == event.entry.id }) list else list.add(event.entry)
 			is DiaryEvent.EntryDeleted -> list.filterNot { it.id == event.id }.toPersistentList()
