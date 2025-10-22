@@ -1,6 +1,6 @@
 package de.lehrbaum.voiry.ui
 
-import de.lehrbaum.voicerecorder.Recorder
+import de.findusl.wavrecorder.Recorder
 import de.lehrbaum.voiry.api.v1.DiaryClient
 import de.lehrbaum.voiry.api.v1.VoiceDiaryEntry
 import dev.mokkery.MockMode

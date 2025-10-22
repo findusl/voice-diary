@@ -19,7 +19,7 @@ import androidx.lifecycle.ViewModelStore
 import androidx.lifecycle.ViewModelStoreOwner
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.viewmodel.compose.LocalViewModelStoreOwner
-import de.lehrbaum.voicerecorder.Recorder
+import de.findusl.wavrecorder.Recorder
 import de.lehrbaum.voiry.UiTest
 import de.lehrbaum.voiry.api.v1.DiaryClient
 import de.lehrbaum.voiry.api.v1.TranscriptionStatus

@@ -41,8 +41,8 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
-import de.lehrbaum.voicerecorder.Recorder
-import de.lehrbaum.voicerecorder.platformRecorder
+import de.findusl.wavrecorder.Recorder
+import de.findusl.wavrecorder.platformRecorder
 import de.lehrbaum.voiry.api.v1.DiaryClient
 import de.lehrbaum.voiry.audio.Transcriber
 import kotlin.time.ExperimentalTime
