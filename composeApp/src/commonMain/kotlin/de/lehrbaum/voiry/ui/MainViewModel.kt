@@ -3,8 +3,8 @@ package de.lehrbaum.voiry.ui
 import androidx.compose.runtime.Immutable
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import de.lehrbaum.voicerecorder.Recorder
-import de.lehrbaum.voicerecorder.platformRecorder
+import de.findusl.wavrecorder.Recorder
+import de.findusl.wavrecorder.platformRecorder
 import de.lehrbaum.voiry.api.v1.DiaryClient
 import de.lehrbaum.voiry.api.v1.TranscriptionStatus
 import de.lehrbaum.voiry.api.v1.UpdateTranscriptionRequest

@@ -6,8 +6,8 @@ import io.github.aakira.napier.Napier
 import java.time.ZonedDateTime
 import java.time.format.DateTimeFormatter
 
-actual fun initLogging() {
-	Napier.base(CustomAntilog())
+actual fun initLoggingPlatform() {
+	Napier.base(CustomAntilog(minLogLevel = LogLevel.VERBOSE))
 }
 
 private class CustomAntilog(
