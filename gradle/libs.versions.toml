@@ -30,6 +30,7 @@ lexilabs-basic = "+"
 kotlinx-datetime = "0.7.1-0.6.x-compat"
 buildkonfig = "0.17.1"
 kotlinx-collections-immutable = "0.4.0"
+wavRecorder = "0.1.0"
 
 [libraries]
 kotlin-test = { module = "org.jetbrains.kotlin:kotlin-test", version.ref = "kotlin" }
@@ -67,6 +68,7 @@ lexilabs-basic-sound = { module = "app.lexilabs.basic:basic-sound", version.ref 
 kotlinx-datetime = { module = "org.jetbrains.kotlinx:kotlinx-datetime", version.ref = "kotlinx-datetime" }
 kotlinx-collections-immutable = { module = "org.jetbrains.kotlinx:kotlinx-collections-immutable", version.ref = "kotlinx-collections-immutable" }
 purity-annotations = { module = "io.github.yairm210:purity-annotations", version.ref = "purity" }
+wav-recorder = { module = "de.findusl:wav-recorder", version.ref = "wavRecorder" }
 
 [plugins]
 androidApplication = { id = "com.android.application", version.ref = "agp" }
