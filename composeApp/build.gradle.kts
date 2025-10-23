@@ -56,7 +56,7 @@ kotlin {
 			implementation(libs.androidx.activity.compose)
 		}
 		commonMain.dependencies {
-			implementation("de.findusl:wav-recorder:0.1.0")
+			implementation(libs.wav.recorder)
 			implementation(projects.shared)
 			implementation(compose.runtime)
 			implementation(compose.foundation)
