@@ -5,7 +5,6 @@ plugins {
 	alias(libs.plugins.kotlinMultiplatform)
 	alias(libs.plugins.androidLibrary)
 	alias(libs.plugins.kotlinSerialization)
-	alias(libs.plugins.purity)
 }
 
 kotlin {
@@ -22,7 +21,6 @@ kotlin {
 		commonMain.dependencies {
 			implementation(libs.kotlinx.coroutinesCore)
 			implementation(libs.kotlinx.serializationJson)
-			implementation(libs.purity.annotations)
 		}
 		commonTest.dependencies {
 			implementation(libs.kotlin.test)

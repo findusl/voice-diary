@@ -1,5 +1,3 @@
-import buildsrc.configureVoiceDiaryPurity
-
 plugins {
 	// this is necessary to avoid the plugins to be loaded multiple times
 	// in each subproject's classloader
@@ -29,12 +27,6 @@ allprojects {
 	detekt {
 		config.setFrom("$rootDir/config/detekt/detekt.yml")
 		baseline = file("$rootDir/config/detekt/baseline.xml")
-	}
-}
-
-subprojects {
-	plugins.withId("io.github.yairm210.purity-plugin") {
-		this@subprojects.configureVoiceDiaryPurity()
 	}
 }
 

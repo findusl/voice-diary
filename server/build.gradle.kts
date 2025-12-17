@@ -1,7 +1,6 @@
 plugins {
 	alias(libs.plugins.kotlinJvm)
 	alias(libs.plugins.ktor)
-	alias(libs.plugins.purity)
 	application
 }
 
@@ -27,7 +26,6 @@ dependencies {
 	implementation(libs.sqlite)
 	implementation(libs.appdirs)
 	implementation(libs.napier)
-	implementation(libs.purity.annotations)
 	testImplementation(libs.ktor.serverTestHost)
 	testImplementation(libs.kotlin.testJunit)
 	testImplementation(libs.ktor.clientCore)
