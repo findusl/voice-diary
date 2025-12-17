@@ -10,7 +10,6 @@ import kotlin.time.ExperimentalTime
 import kotlin.time.Instant
 import kotlin.uuid.ExperimentalUuidApi
 import kotlin.uuid.Uuid
-import yairm210.purity.annotations.Pure
 
 @Immutable
 data class UiVoiceDiaryEntry(
@@ -23,7 +22,6 @@ data class UiVoiceDiaryEntry(
 	val transcriptionUpdatedAt: Instant?,
 )
 
-@Pure
 fun VoiceDiaryEntry.toUi() =
 	UiVoiceDiaryEntry(
 		id = id,
