@@ -143,5 +143,9 @@ private suspend fun ApplicationCall.receiveEntryMultipart(): Pair<VoiceDiaryEntr
 		}
 		part.dispose()
 	}
-	return if (metadata != null && audio != null) metadata!! to audio!! else null
+	return if (metadata != null && audio != null) {
+		metadata to audio
+	} else {
+		null
+	}
 }

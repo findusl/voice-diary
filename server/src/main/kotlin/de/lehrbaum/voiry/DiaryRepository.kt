@@ -5,7 +5,6 @@ import de.lehrbaum.voiry.api.v1.TranscriptionStatus
 import de.lehrbaum.voiry.api.v1.VoiceDiaryEntry
 import java.nio.file.Files
 import java.nio.file.Path
-import java.util.UUID
 import kotlin.io.path.exists
 import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.ExperimentalTime
@@ -14,16 +13,16 @@ import kotlin.uuid.ExperimentalUuidApi
 import kotlin.uuid.Uuid
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-import org.jetbrains.exposed.sql.Database
-import org.jetbrains.exposed.sql.SchemaUtils
-import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
-import org.jetbrains.exposed.sql.Table
-import org.jetbrains.exposed.sql.deleteWhere
-import org.jetbrains.exposed.sql.insert
-import org.jetbrains.exposed.sql.selectAll
-import org.jetbrains.exposed.sql.transactions.experimental.newSuspendedTransaction
-import org.jetbrains.exposed.sql.transactions.transaction
-import org.jetbrains.exposed.sql.update
+import org.jetbrains.exposed.v1.core.Table
+import org.jetbrains.exposed.v1.core.eq
+import org.jetbrains.exposed.v1.jdbc.Database
+import org.jetbrains.exposed.v1.jdbc.SchemaUtils
+import org.jetbrains.exposed.v1.jdbc.deleteWhere
+import org.jetbrains.exposed.v1.jdbc.insert
+import org.jetbrains.exposed.v1.jdbc.selectAll
+import org.jetbrains.exposed.v1.jdbc.transactions.suspendTransaction
+import org.jetbrains.exposed.v1.jdbc.transactions.transaction
+import org.jetbrains.exposed.v1.jdbc.update
 
 private const val STATUS_NAME_MAX_LENGTH = 20 // Maximum TranscriptionStatus name length
 
@@ -58,12 +57,11 @@ class DiaryRepository(private val baseDir: Path) {
 	}
 
 	suspend fun add(entry: VoiceDiaryEntry, audio: ByteArray) {
-		val id = UUID.fromString(entry.id.toString())
 		val audioFile = baseDir.resolve("${entry.id}.wav")
 		withContext(Dispatchers.IO) { Files.write(audioFile, audio) }
-		newSuspendedTransaction(db = database) {
+		suspendTransaction(db = database) {
 			Entries.insert {
-				it[Entries.id] = id
+				it[Entries.id] = entry.id
 				it[title] = entry.title
 				it[recordedAt] = entry.recordedAt.toEpochMilliseconds()
 				it[duration] = entry.duration.inWholeMilliseconds
@@ -80,9 +78,8 @@ class DiaryRepository(private val baseDir: Path) {
 		status: TranscriptionStatus,
 		updatedAt: Instant?,
 	) {
-		val uuid = UUID.fromString(id.toString())
-		newSuspendedTransaction(db = database) {
-			Entries.update({ Entries.id eq uuid }) {
+		suspendTransaction(db = database) {
+			Entries.update({ Entries.id eq id }) {
 				it[transcriptionText] = text
 				it[transcriptionStatus] = status
 				it[transcriptionUpdatedAt] = updatedAt?.toEpochMilliseconds()
@@ -91,9 +88,8 @@ class DiaryRepository(private val baseDir: Path) {
 	}
 
 	suspend fun delete(id: Uuid) {
-		val uuid = UUID.fromString(id.toString())
-		newSuspendedTransaction(db = database) {
-			Entries.deleteWhere { Entries.id eq uuid }
+		suspendTransaction(db = database) {
+			Entries.deleteWhere { Entries.id eq id }
 		}
 		val audioFile = baseDir.resolve("$id.wav")
 		withContext(Dispatchers.IO) { Files.deleteIfExists(audioFile) }
@@ -106,10 +102,10 @@ class DiaryRepository(private val baseDir: Path) {
 	}
 
 	suspend fun getAll(): List<VoiceDiaryEntry> =
-		newSuspendedTransaction(db = database) {
+		suspendTransaction(db = database) {
 			Entries.selectAll().map {
 				VoiceDiaryEntry(
-					id = Uuid.parse(it[Entries.id].toString()),
+					id = it[Entries.id],
 					title = it[Entries.title],
 					recordedAt = it[Entries.recordedAt].epochMillisToInstant(),
 					duration = it[Entries.duration].milliseconds,
