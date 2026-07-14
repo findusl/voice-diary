@@ -91,6 +91,7 @@ jobs:
           arch: x86_64
           profile: pixel_6
           ram-size: 4096M
+          disk-size: 8G
           # Stable emulator 36.6.11 remains ADB-offline with the API 37 image.
           emulator-build: "15828024" # Emulator 37.1.8
           disable-animations: true
