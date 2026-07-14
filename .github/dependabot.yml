@@ -1,31 +1,70 @@
-# Please see the documentation for all configuration options:
-# https://help.github.com/github/administering-a-repository/configuration-options-for-dependency-updates
-
-# Gradle note: The dependabot does not find the versions in gradle.properties,
-# but constants in the build.gradle file worked.
-
 version: 2
 updates:
-  - package-ecosystem: "gradle"
+  - package-ecosystem: gradle
     directory: "/"
     schedule:
-      interval: "daily"
-    target-branch: "main"
+      interval: daily
+    target-branch: main
     assignees:
-      - "findusl"
+      - findusl
     reviewers:
-      - "findusl"
+      - findusl
     open-pull-requests-limit: 10
     ignore:
-      # Allow 8.11.x bugfixes, block 8.12+ (Intellij IDE Plugin support)
-      - dependency-name: "com.android.tools.build:gradle"
+      # Kotlin 2.4.x supports Gradle only through 9.5. Revisit this ceiling when
+      # a newer Kotlin minor expands the official compatibility matrix.
+      - dependency-name: gradle-wrapper
         versions:
-          - ">= 8.12.0"
-      # Kotlin 2.4.x does not support Gradle 9.6+; remove when Kotlin's compatibility matrix does.
-      - dependency-name: "gradle-wrapper"
+          - "> 9.5.0"
+      # Kotlin 2.4.x officially supports AGP through 9.1.0; 9.1.1 is a tested
+      # patch-level exception. Revisit when a newer Kotlin minor supports more.
+      - dependency-name: com.android.tools.build:gradle
         versions:
-          - ">= 9.6.0"
+          - "> 9.1.1"
+      - dependency-name: com.android.application
+        versions:
+          - "> 9.1.1"
+      - dependency-name: com.android.kotlin.multiplatform.library
+        versions:
+          - "> 9.1.1"
     groups:
-      all-dependencies:
+      toolchain:
+        patterns:
+          - gradle-wrapper
+          - com.android.tools.build:gradle
+          - com.android.application
+          - com.android.kotlin.multiplatform.library
+          - org.gradle.toolchains.*
+          - org.jetbrains.kotlin.*
+          - org.jetbrains.compose*
+      libraries:
+        patterns:
+          - "*"
+
+  - package-ecosystem: github-actions
+    directory: "/"
+    schedule:
+      interval: daily
+    target-branch: main
+    assignees:
+      - findusl
+    reviewers:
+      - findusl
+    groups:
+      actions:
+        patterns:
+          - "*"
+
+  - package-ecosystem: docker
+    directory: "/"
+    schedule:
+      interval: daily
+    target-branch: main
+    assignees:
+      - findusl
+    reviewers:
+      - findusl
+    groups:
+      base-images:
         patterns:
           - "*"
