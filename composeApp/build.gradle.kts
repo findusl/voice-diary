@@ -121,7 +121,7 @@ compose.desktop {
 		mainClass = "de.lehrbaum.voiry.MainKt"
 
 		nativeDistributions {
-			targetFormats(TargetFormat.Dmg, TargetFormat.Msi, TargetFormat.Deb)
+			targetFormats(TargetFormat.Dmg)
 			packageName = "de.lehrbaum.voiry"
 			packageVersion = "1.0.0"
 		}
