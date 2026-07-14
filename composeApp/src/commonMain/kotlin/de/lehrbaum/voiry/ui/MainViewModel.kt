@@ -17,6 +17,8 @@ import kotlin.time.Clock
 import kotlin.time.Duration
 import kotlin.time.ExperimentalTime
 import kotlin.time.Instant
+import kotlin.time.TimeMark
+import kotlin.time.TimeSource
 import kotlin.uuid.ExperimentalUuidApi
 import kotlin.uuid.Uuid
 import kotlinx.collections.immutable.PersistentList
@@ -44,8 +46,10 @@ class MainViewModel(
 	private val recorder: Recorder = platformRecorder,
 	private val transcriber: Transcriber?,
 	cacheAvailable: Boolean = true,
+	private val timeSource: TimeSource = TimeSource.Monotonic,
 ) : ViewModel(), Closeable {
 	private val timeZone = TimeZone.currentSystemDefault()
+	private var recordingStartedAt: TimeMark? = null
 	private val baseState = MutableStateFlow(
 		MainUiState(
 			recorderAvailable = recorder.isAvailable,
@@ -57,8 +61,8 @@ class MainViewModel(
 			baseState,
 			diaryClient.entries.map { entries -> entries.map { it.toUi() }.toPersistentList() },
 			diaryClient.connectionError,
-		) { state, entries, error ->
-			state.copy(entries = entries, error = error)
+		) { state, entries, connectionError ->
+			state.copy(entries = entries, error = state.error ?: connectionError)
 		}.stateIn(
 			viewModelScope,
 			SharingStarted.WhileSubscribed(stopTimeoutMillis = 5_000),
@@ -71,6 +75,7 @@ class MainViewModel(
 	}
 
 	override fun close() {
+		recordingStartedAt = null
 		runCatching { recorder.close() }
 			.onFailure { Napier.e("Recorder close failed", it) }
 	}
@@ -78,15 +83,25 @@ class MainViewModel(
 	fun startRecording() {
 		runCatching { recorder.startRecording() }
 			.onSuccess {
+				recordingStartedAt = timeSource.markNow()
 				baseState.update { it.copy(isRecording = true, error = null) }
 			}.onFailure { e ->
+				recordingStartedAt = null
 				baseState.update {
 					it.copy(isRecording = false, error = e.message ?: "Failed to start recording")
 				}
 			}
 	}
 
+	fun audioPermissionDenied() {
+		baseState.update {
+			it.copy(isRecording = false, error = "Microphone permission is required to record")
+		}
+	}
+
 	fun stopRecording() {
+		val duration = recordingStartedAt?.elapsedNow()?.coerceAtLeast(Duration.ZERO) ?: Duration.ZERO
+		recordingStartedAt = null
 		viewModelScope.launch {
 			val stopResult = recorder.stopRecording()
 			stopResult
@@ -94,7 +109,7 @@ class MainViewModel(
 					val bytes = buffer.readByteArray()
 					baseState.update {
 						it.copy(
-							pendingRecording = Recording(bytes),
+							pendingRecording = Recording(bytes, duration),
 							pendingRecordedAt = Clock.System.now(),
 							isRecording = false,
 							error = null,
@@ -115,11 +130,11 @@ class MainViewModel(
 	}
 
 	fun updatePendingTitle(title: String) {
-		baseState.update { it.copy(pendingTitle = title) }
+		baseState.update { if (it.isSaving) it else it.copy(pendingTitle = title) }
 	}
 
 	fun updatePendingRecordedAt(recordedAt: Instant) {
-		baseState.update { it.copy(pendingRecordedAt = recordedAt) }
+		baseState.update { if (it.isSaving) it else it.copy(pendingRecordedAt = recordedAt) }
 	}
 
 	fun updatePendingRecordedDate(selectedDateMillis: Long) {
@@ -130,7 +145,7 @@ class MainViewModel(
 		baseState.update { state ->
 			val currentTime = state.pendingRecordedAt.toLocalDateTime(timeZone).time
 			val updated = LocalDateTime(selectedDate, currentTime).toInstant(timeZone)
-			state.copy(pendingRecordedAt = updated)
+			if (state.isSaving) state else state.copy(pendingRecordedAt = updated)
 		}
 	}
 
@@ -138,40 +153,59 @@ class MainViewModel(
 		baseState.update { state ->
 			val currentDate = state.pendingRecordedAt.toLocalDateTime(timeZone).date
 			val updated = LocalDateTime(currentDate, LocalTime(hour, minute)).toInstant(timeZone)
-			state.copy(pendingRecordedAt = updated)
+			if (state.isSaving) state else state.copy(pendingRecordedAt = updated)
 		}
 	}
 
 	fun cancelSaveRecording() {
 		baseState.update {
+			if (it.isSaving) return@update it
 			it.copy(
 				pendingRecording = null,
 				pendingTitle = "",
 				pendingRecordedAt = Clock.System.now(),
+				error = null,
 			)
 		}
 	}
 
 	fun saveRecording() {
-		val recording = baseState.value.pendingRecording ?: return
-		val title = baseState.value.pendingTitle
-		val recordedAt = baseState.value.pendingRecordedAt
+		val request = claimPendingSave() ?: return
 		viewModelScope.launch {
+			val recording = request.recording
 			val bytes = recording.data
 			val entry = VoiceDiaryEntry(
-				id = Uuid.random(),
-				title = title,
-				recordedAt = recordedAt,
-				duration = Duration.ZERO,
+				id = recording.id,
+				title = request.title,
+				recordedAt = request.recordedAt,
+				duration = recording.duration,
 			)
 			runSuspendCatching { diaryClient.createEntry(entry, bytes) }
-				.onFailure { e -> baseState.update { it.copy(error = e.message) } }
-			baseState.update {
-				it.copy(
-					pendingRecording = null,
-					pendingTitle = "",
-					pendingRecordedAt = Clock.System.now(),
-				)
+				.onSuccess {
+					baseState.update { state ->
+						if (state.pendingRecording !== recording) {
+							state.copy(isSaving = false)
+						} else {
+							state.copy(
+								pendingRecording = null,
+								pendingTitle = "",
+								pendingRecordedAt = Clock.System.now(),
+								isSaving = false,
+								error = null,
+							)
+						}
+					}
+				}.onFailure { e -> baseState.update { it.copy(isSaving = false, error = e.message) } }
+		}
+	}
+
+	private fun claimPendingSave(): PendingSaveRequest? {
+		while (true) {
+			val state = baseState.value
+			val recording = state.pendingRecording ?: return null
+			if (state.isSaving) return null
+			if (baseState.compareAndSet(state, state.copy(isSaving = true, error = null))) {
+				return PendingSaveRequest(recording, state.pendingTitle, state.pendingRecordedAt)
 			}
 		}
 	}
@@ -179,6 +213,7 @@ class MainViewModel(
 	fun deleteEntry(entry: UiVoiceDiaryEntry) {
 		viewModelScope.launch {
 			runSuspendCatching { diaryClient.deleteEntry(entry.id) }
+				.onSuccess { baseState.update { it.copy(error = null) } }
 				.onFailure { e -> baseState.update { it.copy(error = e.message) } }
 		}
 	}
@@ -187,6 +222,7 @@ class MainViewModel(
 		val transcriber = transcriber ?: return
 		viewModelScope.launch {
 			runSuspendCatching {
+				transcriber.initialize()
 				val bytes = diaryClient.getAudio(entry.id)
 				val buffer = Buffer().apply { write(bytes) }
 				val prompt = initialPromptFromTitle(entry.title)
@@ -199,6 +235,8 @@ class MainViewModel(
 						Clock.System.now(),
 					),
 				)
+			}.onSuccess {
+				baseState.update { it.copy(error = null) }
 			}.onFailure { e ->
 				baseState.update { it.copy(error = e.message) }
 				runSuspendCatching {
@@ -224,6 +262,7 @@ data class MainUiState(
 	val pendingRecording: Recording? = null,
 	val pendingTitle: String = "",
 	val pendingRecordedAt: Instant = Clock.System.now(),
+	val isSaving: Boolean = false,
 	val error: String? = null,
 	val recorderAvailable: Boolean = true,
 	val recorderUnavailableDismissed: Boolean = false,
@@ -232,4 +271,14 @@ data class MainUiState(
 )
 
 @Immutable
-class Recording(val data: ByteArray)
+class Recording(
+	val data: ByteArray,
+	val duration: Duration,
+	val id: Uuid = Uuid.random(),
+)
+
+private data class PendingSaveRequest(
+	val recording: Recording,
+	val title: String,
+	val recordedAt: Instant,
+)

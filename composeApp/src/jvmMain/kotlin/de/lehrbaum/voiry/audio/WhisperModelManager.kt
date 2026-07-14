@@ -17,6 +17,8 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 
 private const val TAG = "WhisperModelManager"
@@ -31,24 +33,32 @@ class WhisperModelManager(
 	private val modelUrl: URL = MODEL_URL,
 ) : ModelDownloader {
 	private var initialized = false
+	private val initializeMutex = Mutex()
 	private val _modelDownloadProgress = MutableStateFlow<Float?>(null)
 	override val modelDownloadProgress: StateFlow<Float?> = _modelDownloadProgress.asStateFlow()
 
-	suspend fun initialize() =
-		withContext(Dispatchers.IO) {
-			if (initialized) return@withContext
-
-			val modelDir = modelPath.parent ?: error("Model path has no parent")
-			modelDir.createDirectories()
-			cleanupLeftoverPartFiles(modelDir)
-			if (modelPath.exists()) {
-				Napier.d("Whisper model already exists at ${modelPath.toAbsolutePath()}", tag = TAG)
-				_modelDownloadProgress.value = 1f
-			} else {
-				downloadModel(modelDir)
+	suspend fun initialize() {
+		initializeMutex.withLock {
+			if (initialized) return@withLock
+			try {
+				withContext(Dispatchers.IO) {
+					val modelDir = modelPath.parent ?: error("Model path has no parent")
+					modelDir.createDirectories()
+					cleanupLeftoverPartFiles(modelDir)
+					if (modelPath.exists()) {
+						Napier.d("Whisper model already exists at ${modelPath.toAbsolutePath()}", tag = TAG)
+						_modelDownloadProgress.value = 1f
+					} else {
+						downloadModel(modelDir)
+					}
+				}
+				initialized = true
+			} catch (failure: Throwable) {
+				_modelDownloadProgress.value = null
+				throw failure
 			}
-			initialized = true
 		}
+	}
 
 	private fun cleanupLeftoverPartFiles(modelDir: Path) {
 		modelDir.listDirectoryEntries("*.part").forEach {
@@ -61,24 +71,28 @@ class WhisperModelManager(
 		Napier.i("Downloading Whisper model to ${modelPath.toAbsolutePath()}", tag = TAG)
 		val tmp = createTempFile(directory = modelDir, prefix = "whisper-", suffix = ".part")
 		tmp.toFile().deleteOnExit()
-		val connection = modelUrl.openConnection()
-		val total = connection.contentLengthLong.takeIf { it > 0 }
-		_modelDownloadProgress.value = 0f
-		connection.getInputStream().use { input ->
-			tmp.outputStream().use { output ->
-				val buf = ByteArray(DEFAULT_BUFFER_SIZE)
-				var downloaded = 0L
-				var read: Int
-				while (input.read(buf).also { read = it } >= 0) {
-					output.write(buf, 0, read)
-					downloaded += read
-					total?.let { _modelDownloadProgress.value = downloaded.toFloat() / it }
+		try {
+			val connection = modelUrl.openConnection()
+			val total = connection.contentLengthLong.takeIf { it > 0 }
+			_modelDownloadProgress.value = 0f
+			connection.getInputStream().use { input ->
+				tmp.outputStream().use { output ->
+					val buf = ByteArray(DEFAULT_BUFFER_SIZE)
+					var downloaded = 0L
+					var read: Int
+					while (input.read(buf).also { read = it } >= 0) {
+						output.write(buf, 0, read)
+						downloaded += read
+						total?.let { _modelDownloadProgress.value = downloaded.toFloat() / it }
+					}
 				}
 			}
+			Files.move(tmp, modelPath, StandardCopyOption.ATOMIC_MOVE)
+			Napier.i("Whisper model downloaded to ${modelPath.toAbsolutePath()}", tag = TAG)
+			_modelDownloadProgress.value = 1f
+		} finally {
+			runCatching { tmp.deleteIfExists() }
 		}
-		Files.move(tmp, modelPath, StandardCopyOption.ATOMIC_MOVE)
-		Napier.i("Whisper model downloaded to ${modelPath.toAbsolutePath()}", tag = TAG)
-		_modelDownloadProgress.value = 1f
 	}
 
 	companion object {

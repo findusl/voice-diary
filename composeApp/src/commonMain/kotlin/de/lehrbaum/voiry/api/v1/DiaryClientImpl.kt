@@ -111,7 +111,11 @@ class DiaryClientImpl(
 				.stateIn(scope, SharingStarted.WhileSubscribed(), null)
 		}
 
-	override fun close() = scope.cancel()
+	override fun close() {
+		scope.cancel()
+		httpClient.close()
+		entryFlows.clear()
+	}
 
 	override suspend fun createEntry(entry: VoiceDiaryEntry, audio: ByteArray): VoiceDiaryEntry {
 		val parts = formData {
@@ -149,7 +153,7 @@ class DiaryClientImpl(
 			audioCache.putAudio(entry.id, audio)
 			return response.body()
 		} finally {
-			parts.forEach { it.dispose() }
+			parts.forEach { it.release() }
 		}
 	}
 
@@ -163,14 +167,8 @@ class DiaryClientImpl(
 
 	override suspend fun deleteEntry(id: Uuid) {
 		val response = httpClient.delete("$baseUrl/v1/entries/$id")
-		if (!response.status.isSuccess()) {
-			val text = response.bodyAsText()
-			if (response.status.value in 400..499) {
-				throw ClientRequestException(response, text)
-			} else {
-				throw ServerResponseException(response, text)
-			}
-		}
+		throwIfFailed(response)
+		audioCache.removeAudio(id)
 	}
 
 	override suspend fun getAudio(id: Uuid): ByteArray {
@@ -200,14 +198,14 @@ class DiaryClientImpl(
 				var dedupedEntries = persistentListOf<VoiceDiaryEntry>()
 				for (entry in event.entries) {
 					if (entry.id !in seenIds) {
-						seenIds = seenIds.add(entry.id)
-						dedupedEntries = dedupedEntries.add(entry)
+						seenIds = seenIds.adding(entry.id)
+						dedupedEntries = dedupedEntries.adding(entry)
 					}
 				}
 				dedupedEntries
 			}
 			is DiaryEvent.EntryCreated ->
-				if (list.any { it.id == event.entry.id }) list else list.add(event.entry)
+				if (list.any { it.id == event.entry.id }) list else list.adding(event.entry)
 			is DiaryEvent.EntryDeleted -> list.filterNot { it.id == event.id }.toPersistentList()
 			is DiaryEvent.TranscriptionUpdated ->
 				list

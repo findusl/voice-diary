@@ -44,6 +44,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import de.findusl.wavrecorder.Recorder
 import de.findusl.wavrecorder.platformRecorder
 import de.lehrbaum.voiry.api.v1.DiaryClient
+import de.lehrbaum.voiry.audio.AudioPermissionRequester
 import de.lehrbaum.voiry.audio.Transcriber
 import kotlin.time.ExperimentalTime
 import kotlin.uuid.ExperimentalUuidApi
@@ -59,7 +60,7 @@ import kotlinx.datetime.toLocalDateTime
 fun MainScreen(
 	diaryClient: DiaryClient,
 	recorder: Recorder = platformRecorder,
-	onRequestAudioPermission: (() -> Unit)? = null,
+	audioPermissionRequester: AudioPermissionRequester? = null,
 	transcriber: Transcriber?,
 	onEntryClick: (UiVoiceDiaryEntry) -> Unit,
 	cacheAvailable: Boolean = true,
@@ -67,7 +68,7 @@ fun MainScreen(
 	val viewModel = viewModel { MainViewModel(diaryClient, recorder, transcriber, cacheAvailable) }
 	MainScreen(
 		viewModel = viewModel,
-		onRequestAudioPermission = onRequestAudioPermission,
+		audioPermissionRequester = audioPermissionRequester,
 		transcriber = transcriber,
 		onEntryClick = onEntryClick,
 	)
@@ -77,15 +78,22 @@ fun MainScreen(
 @Composable
 internal fun MainScreen(
 	viewModel: MainViewModel,
-	onRequestAudioPermission: (() -> Unit)? = null,
+	audioPermissionRequester: AudioPermissionRequester? = null,
 	transcriber: Transcriber?,
 	onEntryClick: (UiVoiceDiaryEntry) -> Unit,
 ) {
 	val state by viewModel.uiState.collectAsStateWithLifecycle()
-	val recordClick = remember(viewModel) {
+	val recordClick = remember(viewModel, audioPermissionRequester) {
 		{
 			val isRecording = viewModel.uiState.value.isRecording
-			if (!isRecording) viewModel.startRecording() else viewModel.stopRecording()
+			if (isRecording) {
+				viewModel.stopRecording()
+			} else {
+				val onPermissionResult: (Boolean) -> Unit = { granted ->
+					if (granted) viewModel.startRecording() else viewModel.audioPermissionDenied()
+				}
+				audioPermissionRequester?.requestPermission(onPermissionResult) ?: onPermissionResult(true)
+			}
 		}
 	}
 
@@ -119,12 +127,8 @@ internal fun MainScreen(
 				)
 			}
 			if (state.error != null) {
-				val permissionRelated =
-					state.error?.contains("permission", ignoreCase = true) == true && onRequestAudioPermission != null
 				InfoBanner(
 					text = "Error: ${state.error}",
-					actionLabel = if (permissionRelated) "Grant permission" else null,
-					onAction = if (permissionRelated) onRequestAudioPermission else null,
 				)
 			}
 			when {
@@ -174,13 +178,16 @@ internal fun MainScreen(
 		val timeText = localDateTime.time.format(TIME_FORMAT)
 
 		AlertDialog(
-			onDismissRequest = { viewModel.cancelSaveRecording() },
+			onDismissRequest = {
+				if (!state.isSaving) viewModel.cancelSaveRecording()
+			},
 			title = { Text("Save Recording") },
 			text = {
 				Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
 					TextField(
 						value = state.pendingTitle,
 						onValueChange = viewModel::updatePendingTitle,
+						enabled = !state.isSaving,
 						label = { Text("Title") },
 					)
 					Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -189,12 +196,14 @@ internal fun MainScreen(
 							OutlinedButton(
 								modifier = Modifier.testTag("saveRecordingDateButton"),
 								onClick = { showDatePicker = true },
+								enabled = !state.isSaving,
 							) {
 								Text(dateText)
 							}
 							OutlinedButton(
 								modifier = Modifier.testTag("saveRecordingTimeButton"),
 								onClick = { showTimePicker = true },
+								enabled = !state.isSaving,
 							) {
 								Text(timeText)
 							}
@@ -205,11 +214,14 @@ internal fun MainScreen(
 			confirmButton = {
 				TextButton(
 					onClick = { viewModel.saveRecording() },
-					enabled = state.pendingTitle.isNotBlank(),
-				) { Text("Save") }
+					enabled = state.pendingTitle.isNotBlank() && !state.isSaving,
+				) { Text(if (state.isSaving) "Saving…" else "Save") }
 			},
 			dismissButton = {
-				TextButton(onClick = { viewModel.cancelSaveRecording() }) { Text("Cancel") }
+				TextButton(
+					onClick = { viewModel.cancelSaveRecording() },
+					enabled = !state.isSaving,
+				) { Text("Cancel") }
 			},
 		)
 

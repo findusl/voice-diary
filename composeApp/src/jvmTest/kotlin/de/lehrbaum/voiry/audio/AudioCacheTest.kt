@@ -27,4 +27,16 @@ class AudioCacheTest {
 		val result = cache.getAudio(Uuid.random())
 		assertNull(result)
 	}
+
+	@Test
+	fun removeDeletesCachedAudio() {
+		val dir = Files.createTempDirectory("audioCacheTestRemove").toString()
+		val cache = AudioCache(dir)
+		val id = Uuid.random()
+		cache.putAudio(id, byteArrayOf(1, 2, 3))
+
+		cache.removeAudio(id)
+
+		assertNull(cache.getAudio(id))
+	}
 }
