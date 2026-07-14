@@ -88,5 +88,6 @@ jobs:
           arch: x86_64
           profile: pixel_6
           disable-animations: true
+          pre-emulator-launch-script: adb start-server
           emulator-options: -no-window -gpu swiftshader_indirect -no-snapshot -noaudio -no-boot-anim
           script: ./gradlew :androidApp:connectedDebugAndroidTest
