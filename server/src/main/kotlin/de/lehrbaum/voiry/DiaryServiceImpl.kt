@@ -37,6 +37,12 @@ class DiaryServiceImpl private constructor(
 
 	override suspend fun addEntry(entry: VoiceDiaryEntry, audio: ByteArray) {
 		mutex.withLock {
+			val existing = entries[entry.id]
+			if (existing != null) {
+				val existingAudio = repository.getAudio(entry.id)
+				if (existing == entry && existingAudio?.contentEquals(audio) == true) return@withLock
+				throw EntryConflictException(entry.id)
+			}
 			repository.add(entry, audio)
 			entries[entry.id] = entry
 			events.emit(DiaryEvent.EntryCreated(entry))

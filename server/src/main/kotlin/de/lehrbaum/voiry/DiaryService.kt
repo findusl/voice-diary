@@ -27,3 +27,5 @@ interface DiaryService {
 
 	suspend fun getAudio(id: Uuid): ByteArray?
 }
+
+class EntryConflictException(id: Uuid) : IllegalStateException("Entry $id already exists with different metadata")
