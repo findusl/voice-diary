@@ -1,4 +1,4 @@
-### POST entries
+### Stream entries
 GET http://{{base-url}}:8888/v1/entries
 
 ###
