@@ -15,8 +15,8 @@ Before committing, run `./gradlew ktlintFormat`.
 
 To verify changes, run `./gradlew check`.
 
-CI runs project checks and Android instrumented tests on Linux. Testing steps used
-for full local validation on macOS:
+CI runs project checks, builds the Android app and test APKs, and packages the
+Linux DEB. Testing steps used for full local validation on macOS:
 
 1. `./gradlew check`
 2. `nohup ~/Library/Android/sdk/emulator/emulator -avd Medium_Phone_API_37.0 -no-window -no-audio -no-boot-anim -gpu swiftshader_indirect > /tmp/voice-diary-emulator.log 2>&1 &`
