@@ -1,8 +1,10 @@
+import io.gitlab.arturbosch.detekt.Detekt
+
 plugins {
 	// this is necessary to avoid the plugins to be loaded multiple times
 	// in each subproject's classloader
 	alias(libs.plugins.androidApplication) apply false
-	alias(libs.plugins.androidLibrary) apply false
+	alias(libs.plugins.androidMultiplatformLibrary) apply false
 	alias(libs.plugins.composeHotReload) apply false
 	alias(libs.plugins.composeMultiplatform) apply false
 	alias(libs.plugins.composeCompiler) apply false
@@ -26,7 +28,10 @@ allprojects {
 
 	detekt {
 		config.setFrom("$rootDir/config/detekt/detekt.yml")
-		baseline = file("$rootDir/config/detekt/baseline.xml")
+	}
+
+	tasks.withType<Detekt>().configureEach {
+		jvmTarget = "17"
 	}
 }
 
@@ -35,11 +40,8 @@ tasks.register("checkAgentsEnvironment") {
 	description = "Runs all tests that are expected to pass in the agent environment"
 	dependsOn(
 		":composeApp:jvmNoUiTest",
-		":composeApp:testDebugUnitTest",
-		":composeApp:testReleaseUnitTest",
+		":androidApp:testDebugUnitTest",
 		":shared:jvmTest",
-		":shared:testDebugUnitTest",
-		":shared:testReleaseUnitTest",
 		":server:test",
 	)
 	// Also depend on ktlintCheck in every subproject, not just the root project
