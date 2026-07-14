@@ -16,7 +16,7 @@ permissions:
 jobs:
   check:
     name: Gradle check
-    runs-on: ubuntu-latest
+    runs-on: macos-15-intel
     permissions:
       contents: read
       checks: write
@@ -58,7 +58,7 @@ jobs:
 
   android-instrumented-test:
     name: Android API 37 instrumented tests
-    runs-on: ubuntu-latest
+    runs-on: macos-15-intel
     timeout-minutes: 45
 
     steps:
@@ -74,12 +74,6 @@ jobs:
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@3f131e8634966bd73d06cc69884922b02e6faf92 # v6
 
-      - name: Enable KVM
-        run: |
-          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
-          sudo udevadm control --reload-rules
-          sudo udevadm trigger --name-match=kvm
-
       - name: Run instrumented tests
         uses: ReactiveCircus/android-emulator-runner@a421e43855164a8197daf9d8d40fe71c6996bb0d # v2
         with:
@@ -89,6 +83,5 @@ jobs:
           profile: pixel_6
           ram-size: 4096M
           disable-animations: true
-          pre-emulator-launch-script: adb start-server
           emulator-options: -no-window -gpu swiftshader_indirect -no-snapshot -noaudio -no-boot-anim
           script: ./gradlew :androidApp:connectedDebugAndroidTest
