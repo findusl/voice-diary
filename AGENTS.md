@@ -2,10 +2,8 @@
 
 - The `androidApp` module is the thin Android application. Android entry points,
   the application manifest, launcher resources, and instrumented tests belong there.
-- The JVM client and development/CI workflow target macOS only. Do not add Linux
-  or Windows desktop packaging or host-specific validation.
-- Linux details in `Dockerfile` are server-container internals, not supported
-  development-host behavior; keep host instructions focused on Docker Desktop for macOS.
+- The JVM client supports Linux and macOS. Native desktop packaging is limited to
+  DEB and DMG unless another platform is explicitly added.
 - The `shared` module contains only code shared between client and server, such as data models.
 - Client-only logic must live in the `composeApp` module.
 - Server-only code must reside in the `server` module.
@@ -17,7 +15,8 @@ Before committing, run `./gradlew ktlintFormat`.
 
 To verify changes, run `./gradlew check`.
 
-Testing steps used for full validation on macOS:
+CI runs project checks and Android instrumented tests on Linux. Testing steps used
+for full local validation on macOS:
 
 1. `./gradlew check`
 2. `nohup ~/Library/Android/sdk/emulator/emulator -avd Medium_Phone_API_37.0 -no-window -no-audio -no-boot-anim -gpu swiftshader_indirect > /tmp/voice-diary-emulator.log 2>&1 &`
