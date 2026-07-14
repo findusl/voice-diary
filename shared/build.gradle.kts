@@ -3,39 +3,36 @@ import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 
 plugins {
 	alias(libs.plugins.kotlinMultiplatform)
-	alias(libs.plugins.androidLibrary)
+	alias(libs.plugins.androidMultiplatformLibrary)
 	alias(libs.plugins.kotlinSerialization)
 }
 
 kotlin {
-	androidTarget {
+	android {
+		namespace = "de.lehrbaum.voiry.shared"
+		compileSdk = libs.versions.android.compileSdk.get().toInt()
+		minSdk = libs.versions.android.minSdk.get().toInt()
 		@OptIn(ExperimentalKotlinGradlePluginApi::class)
 		compilerOptions {
-			jvmTarget.set(JvmTarget.JVM_11)
+			jvmTarget.set(JvmTarget.JVM_17)
 		}
 	}
 
-	jvm()
+	jvm {
+		@OptIn(ExperimentalKotlinGradlePluginApi::class)
+		compilerOptions {
+			jvmTarget.set(JvmTarget.JVM_17)
+		}
+	}
+
+	jvmToolchain(21)
 
 	sourceSets {
 		commonMain.dependencies {
-			implementation(libs.kotlinx.coroutinesCore)
 			implementation(libs.kotlinx.serializationJson)
 		}
 		commonTest.dependencies {
 			implementation(libs.kotlin.test)
 		}
-	}
-}
-
-android {
-	namespace = "de.lehrbaum.voiry.shared"
-	compileSdk = libs.versions.android.compileSdk.get().toInt()
-	compileOptions {
-		sourceCompatibility = JavaVersion.VERSION_11
-		targetCompatibility = JavaVersion.VERSION_11
-	}
-	defaultConfig {
-		minSdk = libs.versions.android.minSdk.get().toInt()
 	}
 }

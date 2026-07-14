@@ -1,7 +1,24 @@
+import org.jetbrains.kotlin.gradle.dsl.JvmTarget
+
 plugins {
 	alias(libs.plugins.kotlinJvm)
 	alias(libs.plugins.ktor)
 	application
+}
+
+kotlin {
+	jvmToolchain(21)
+	compilerOptions {
+		jvmTarget.set(JvmTarget.JVM_17)
+	}
+}
+
+java {
+	toolchain {
+		languageVersion.set(JavaLanguageVersion.of(21))
+	}
+	sourceCompatibility = JavaVersion.VERSION_17
+	targetCompatibility = JavaVersion.VERSION_17
 }
 
 group = "de.lehrbaum.voiry"
