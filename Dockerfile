@@ -1,15 +1,17 @@
-# --- build stage ---
-FROM gradle:8.5-jdk17 AS build
+FROM eclipse-temurin:21-jdk-jammy AS build
 WORKDIR /src
 COPY . .
 RUN ./gradlew :server:buildFatJar --no-daemon
 
-# --- runtime stage ---
-FROM eclipse-temurin:17-jre
+FROM eclipse-temurin:21-jre-jammy
+RUN apt-get update \
+    && apt-get install --yes --no-install-recommends curl \
+    && rm -rf /var/lib/apt/lists/*
 WORKDIR /app
 COPY --from=build /src/server/build/libs/*-all.jar app.jar
 ENV VOICE_DIARY_DB_PATH=/data
 VOLUME /data
 EXPOSE 8888
-ENTRYPOINT ["java","-jar","/app/app.jar"]
-
+HEALTHCHECK --interval=30s --timeout=10s --retries=5 \
+    CMD curl --fail --silent --show-error http://localhost:8888/health || exit 1
+ENTRYPOINT ["java", "-jar", "/app/app.jar"]
