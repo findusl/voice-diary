@@ -16,7 +16,7 @@ permissions:
 jobs:
   check:
     name: Gradle check
-    runs-on: macos-15-intel
+    runs-on: ubuntu-latest
     permissions:
       contents: read
       checks: write
@@ -36,6 +36,9 @@ jobs:
 
       - name: Run checks
         run: ./gradlew check
+
+      - name: Build Linux package
+        run: ./gradlew :composeApp:packageDeb
 
       - name: Publish test results
         if: ${{ always() && github.actor != 'dependabot[bot]' && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository) }}
@@ -58,7 +61,7 @@ jobs:
 
   android-instrumented-test:
     name: Android API 37 instrumented tests
-    runs-on: macos-15-intel
+    runs-on: ubuntu-latest
     timeout-minutes: 45
 
     steps:
@@ -74,6 +77,12 @@ jobs:
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@3f131e8634966bd73d06cc69884922b02e6faf92 # v6
 
+      - name: Enable KVM
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+
       - name: Run instrumented tests
         uses: ReactiveCircus/android-emulator-runner@a421e43855164a8197daf9d8d40fe71c6996bb0d # v2
         with:
@@ -82,6 +91,9 @@ jobs:
           arch: x86_64
           profile: pixel_6
           ram-size: 4096M
+          # Stable emulator 36.6.11 remains ADB-offline with the API 37 image.
+          emulator-build: "15828024" # Emulator 37.1.8
           disable-animations: true
+          pre-emulator-launch-script: adb start-server
           emulator-options: -no-window -gpu swiftshader_indirect -no-snapshot -noaudio -no-boot-anim
           script: ./gradlew :androidApp:connectedDebugAndroidTest
