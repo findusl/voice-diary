@@ -32,6 +32,7 @@ import kotlin.test.Test
 import kotlin.test.assertContentEquals
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
+import kotlin.test.assertNull
 import kotlin.test.assertTrue
 import kotlin.time.Clock
 import kotlin.time.Duration.Companion.seconds
@@ -48,6 +49,7 @@ import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.job
 import io.ktor.server.plugins.contentnegotiation.ContentNegotiation as ServerContentNegotiation
 
 @OptIn(ExperimentalTime::class, ExperimentalUuidApi::class)
@@ -257,6 +259,35 @@ class DiaryClientTest {
 		}
 
 	@Test
+	fun `delete entry evicts cached audio`() =
+		testApplication {
+			val id = Uuid.random()
+			audioCache.putAudio(id, byteArrayOf(1, 2, 3))
+			application {
+				routing { delete("/v1/entries/{id}") { call.respond(HttpStatusCode.NoContent) } }
+			}
+			createDiaryClientAgainstMockKtorApplication().use { client: DiaryClient ->
+				client.deleteEntry(id)
+				assertNull(audioCache.getAudio(id))
+			}
+		}
+
+	@Test
+	fun `failed delete retains cached audio`() =
+		testApplication {
+			val id = Uuid.random()
+			val audio = byteArrayOf(4, 5, 6)
+			audioCache.putAudio(id, audio)
+			application {
+				routing { delete("/v1/entries/{id}") { call.respond(HttpStatusCode.NotFound) } }
+			}
+			createDiaryClientAgainstMockKtorApplication().use { client: DiaryClient ->
+				assertFailsWith<ClientRequestException> { client.deleteEntry(id) }
+				assertContentEquals(audio, audioCache.getAudio(id))
+			}
+		}
+
+	@Test
 	fun `delete entry 404`() =
 		testApplication {
 			application {
@@ -349,6 +380,24 @@ class DiaryClientTest {
 					client.getAudio(Uuid.random())
 				}
 			}
+		}
+
+	@Test
+	fun `close closes HTTP client`() =
+		testApplication {
+			val ktorClient = createClient {
+				install(ContentNegotiation) { json() }
+				install(SSE)
+			}
+			val client = DiaryClientImpl(
+				baseUrl = "",
+				httpClient = ktorClient,
+				audioCache = audioCache,
+			)
+
+			client.close()
+
+			assertTrue(ktorClient.coroutineContext.job.isCompleted)
 		}
 
 	private fun ApplicationTestBuilder.createDiaryClientAgainstMockKtorApplication(): DiaryClient =

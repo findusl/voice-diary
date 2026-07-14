@@ -11,7 +11,7 @@ import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performTextInput
-import androidx.compose.ui.test.runComposeUiTest
+import androidx.compose.ui.test.v2.runComposeUiTest
 import androidx.compose.ui.test.waitUntilAtLeastOneExists
 import androidx.compose.ui.test.waitUntilDoesNotExist
 import androidx.lifecycle.Lifecycle
@@ -26,6 +26,7 @@ import de.lehrbaum.voiry.UiTest
 import de.lehrbaum.voiry.api.v1.DiaryClient
 import de.lehrbaum.voiry.api.v1.TranscriptionStatus
 import de.lehrbaum.voiry.api.v1.VoiceDiaryEntry
+import de.lehrbaum.voiry.audio.AudioPermissionRequester
 import dev.mokkery.answering.calls
 import dev.mokkery.answering.returns
 import dev.mokkery.every
@@ -33,6 +34,7 @@ import dev.mokkery.everySuspend
 import dev.mokkery.matcher.any
 import dev.mokkery.mock
 import kotlin.test.assertEquals
+import kotlin.test.assertTrue
 import kotlin.time.Clock
 import kotlin.time.Duration
 import kotlin.time.ExperimentalTime
@@ -96,13 +98,17 @@ class MainScreenTest {
 		}
 
 	@Test
-	fun permission_error_shows_grant_button_and_triggers_callback() =
+	fun record_click_requests_permission_and_starts_recording_when_granted() =
 		runComposeUiTest {
-			val clientMock = diaryClientMock(connectionErrors = listOf("Permission missing"))
-			val client = clientMock.client
+			val client = diaryClientMock().client
 			val recorder = mock<Recorder>()
 			every { recorder.isAvailable } returns true
+			every { recorder.startRecording() } returns Unit
 			var permissionRequested = false
+			val permissionRequester = AudioPermissionRequester { onResult ->
+				permissionRequested = true
+				onResult(true)
+			}
 
 			setContent {
 				CompositionLocalProvider(
@@ -113,17 +119,49 @@ class MainScreenTest {
 						MainScreen(
 							diaryClient = client,
 							recorder = recorder,
+							audioPermissionRequester = permissionRequester,
 							transcriber = null,
 							onEntryClick = { },
-							onRequestAudioPermission = { permissionRequested = true },
 						)
 					}
 				}
 			}
 
-			waitUntilAtLeastOneExists(hasText("Grant permission"))
-			onNodeWithText("Grant permission").performClick()
-			assert(permissionRequested)
+			onNodeWithText("Record").performClick()
+
+			waitUntilAtLeastOneExists(hasText("Stop"))
+			assertTrue(permissionRequested)
+		}
+
+	@Test
+	fun record_click_keeps_recording_stopped_when_permission_is_denied() =
+		runComposeUiTest {
+			val client = diaryClientMock().client
+			val recorder = mock<Recorder>()
+			every { recorder.isAvailable } returns true
+			val permissionRequester = AudioPermissionRequester { onResult -> onResult(false) }
+
+			setContent {
+				CompositionLocalProvider(
+					LocalLifecycleOwner provides FakeLifecycleOwner(),
+					LocalViewModelStoreOwner provides FakeViewModelStoreOwner(),
+				) {
+					MaterialTheme {
+						MainScreen(
+							diaryClient = client,
+							recorder = recorder,
+							audioPermissionRequester = permissionRequester,
+							transcriber = null,
+							onEntryClick = { },
+						)
+					}
+				}
+			}
+
+			onNodeWithText("Record").performClick()
+
+			waitUntilAtLeastOneExists(hasText("Error: Microphone permission is required to record"))
+			onNodeWithText("Record").assertIsDisplayed()
 		}
 
 	@Test
@@ -382,7 +420,7 @@ private fun diaryClientMock(
 				transcriptionText = "Transcript for ${entry.title}",
 				transcriptionStatus = TranscriptionStatus.DONE,
 			)
-			entriesFlow.value = entriesFlow.value.add(0, withTranscript)
+			entriesFlow.value = entriesFlow.value.addingAt(0, withTranscript)
 			withTranscript
 		}
 		everySuspend { deleteEntry(any()) } calls { (id: Uuid) ->

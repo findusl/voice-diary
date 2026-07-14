@@ -178,6 +178,7 @@ private suspend fun transcribeEntry(
 	prompt: String?,
 ): Result<Unit> =
 	runSuspendCatching {
+		transcriber.initialize()
 		val buffer = Buffer().apply { write(audio) }
 		val text = transcriber.transcribe(buffer, prompt)
 		diaryClient.updateTranscription(

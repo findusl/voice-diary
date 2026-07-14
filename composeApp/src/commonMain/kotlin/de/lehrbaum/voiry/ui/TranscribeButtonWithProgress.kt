@@ -31,10 +31,10 @@ fun TranscribeButtonWithProgress(
 	}
 	if (transcriber == null || whisperAvailable != true || downloader == null) return
 
-	val progress = downloader.modelDownloadProgress.collectAsState().value ?: return
+	val progress = downloader.modelDownloadProgress.collectAsState().value
 	val onClick by rememberUpdatedState(onTranscribe)
 
-	if (progress < 1f) {
+	if (progress != null && progress < 1f) {
 		Row(modifier, verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
 			val percent = (progress * 100).toInt()
 			Text("$percent%")

@@ -3,13 +3,14 @@ package de.lehrbaum.voiry
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.tooling.preview.Preview
 import de.lehrbaum.voiry.api.v1.DiaryClientImpl
 import de.lehrbaum.voiry.audio.AudioCache
+import de.lehrbaum.voiry.audio.AudioPermissionRequester
 import de.lehrbaum.voiry.audio.Transcriber
 import de.lehrbaum.voiry.audio.platformTranscriber
 import de.lehrbaum.voiry.ui.EntryDetailScreen
@@ -18,17 +19,15 @@ import de.lehrbaum.voiry.ui.UiVoiceDiaryEntry
 import kotlin.time.ExperimentalTime
 import kotlin.uuid.ExperimentalUuidApi
 import kotlin.uuid.Uuid
-import org.jetbrains.compose.ui.tooling.preview.Preview
 
 @OptIn(ExperimentalUuidApi::class, ExperimentalTime::class)
 @Composable
 @Preview
-fun App(baseUrl: String = BuildKonfig.BACKEND_URL, onRequestAudioPermission: (() -> Unit)? = null) {
+fun App(baseUrl: String = BuildKonfig.BACKEND_URL, audioPermissionRequester: AudioPermissionRequester? = null) {
 	initLogging()
 	val audioCache = remember { AudioCache() }
 	val diaryClient = remember { DiaryClientImpl(baseUrl, audioCache = audioCache) }
 	val transcriber: Transcriber? = remember { platformTranscriber }
-	LaunchedEffect(transcriber) { transcriber?.initialize() }
 	var selectedEntryId by remember { mutableStateOf<Uuid?>(null) }
 	DisposableEffect(diaryClient) {
 		onDispose { diaryClient.close() }
@@ -44,7 +43,7 @@ fun App(baseUrl: String = BuildKonfig.BACKEND_URL, onRequestAudioPermission: (()
 		if (entryId == null) {
 			MainScreen(
 				diaryClient = diaryClient,
-				onRequestAudioPermission = onRequestAudioPermission,
+				audioPermissionRequester = audioPermissionRequester,
 				transcriber = transcriber,
 				onEntryClick = onEntryClick,
 				cacheAvailable = audioCache.enabled,

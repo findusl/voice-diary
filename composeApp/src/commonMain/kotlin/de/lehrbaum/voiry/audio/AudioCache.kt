@@ -41,4 +41,12 @@ class AudioCache(private val baseDir: String = voiceDiaryCacheDir()) {
 			}
 		}.onFailure { Napier.i("Cache write failed: ${it.message}") }
 	}
+
+	fun removeAudio(id: Uuid) {
+		val dir = cacheDir ?: return
+		val path = Path(dir, "$id.wav")
+		runCatching {
+			fileSystem.delete(path, mustExist = false)
+		}.onFailure { Napier.i("Cache delete failed: ${it.message}") }
+	}
 }

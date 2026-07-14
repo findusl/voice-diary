@@ -12,7 +12,7 @@ import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
-import androidx.compose.ui.test.runComposeUiTest
+import androidx.compose.ui.test.v2.runComposeUiTest
 import androidx.compose.ui.test.waitUntilAtLeastOneExists
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleOwner
@@ -32,7 +32,9 @@ import dev.mokkery.answering.calls
 import dev.mokkery.answering.returns
 import dev.mokkery.every
 import dev.mokkery.everySuspend
+import dev.mokkery.matcher.any
 import dev.mokkery.mock
+import kotlin.test.assertEquals
 import kotlin.time.Clock
 import kotlin.time.Duration
 import kotlin.time.ExperimentalTime
@@ -131,19 +133,70 @@ class TranscribeButtonWithProgressTest {
 
 			waitUntilAtLeastOneExists(hasText("Recording 1"))
 			onAllNodesWithText("Transcribe").assertCountEquals(0)
-			(transcriber.modelManager.modelDownloadProgress as MutableStateFlow).value = 1f
+			transcriber.finishDownload()
 			waitUntilAtLeastOneExists(hasText("Transcribe"))
+		}
+
+	@Test
+	fun starts_model_initialization_only_after_transcribe_is_clicked() =
+		runComposeUiTest {
+			System.setProperty("voiceDiary.whisperAvailable", "true")
+			val entry = VoiceDiaryEntry(
+				id = Uuid.random(),
+				title = "Recording 1",
+				recordedAt = Clock.System.now(),
+				duration = Duration.ZERO,
+				transcriptionText = null,
+				transcriptionStatus = TranscriptionStatus.NONE,
+			)
+			val client = singleEntryDiaryClient(entry)
+			val recorder = mock<Recorder>()
+			every { recorder.isAvailable } returns false
+			val transcriber = FakeProgressTranscriber(initial = null)
+
+			setContent {
+				CompositionLocalProvider(
+					LocalLifecycleOwner provides ProgressFakeLifecycleOwner(),
+					LocalViewModelStoreOwner provides ProgressFakeViewModelStoreOwner(),
+				) {
+					MaterialTheme {
+						MainScreen(
+							diaryClient = client,
+							recorder = recorder,
+							transcriber = transcriber,
+							onEntryClick = {},
+						)
+					}
+				}
+			}
+
+			waitUntilAtLeastOneExists(hasText("Transcribe"))
+			assertEquals(0, transcriber.initializeCalls)
+			onNodeWithText("Transcribe").performClick()
+			waitUntil(timeoutMillis = 5_000) { transcriber.initializeCalls == 1 }
 		}
 }
 
 private class FakeProgressTranscriber(initial: Float? = 0.5f) : Transcriber {
+	private val downloadProgress = MutableStateFlow<Float?>(initial)
+
 	override val modelManager = object : ModelDownloader {
-		override val modelDownloadProgress = MutableStateFlow<Float?>(initial)
+		override val modelDownloadProgress = downloadProgress
 	}
 
-	override suspend fun initialize() {}
+	var initializeCalls = 0
+		private set
+
+	override suspend fun initialize() {
+		initializeCalls++
+		downloadProgress.value = 0f
+	}
 
 	override suspend fun transcribe(buffer: Buffer, initialPrompt: String?): String = ""
+
+	fun finishDownload() {
+		downloadProgress.value = 1f
+	}
 }
 
 @OptIn(ExperimentalTime::class, ExperimentalUuidApi::class)
@@ -155,6 +208,7 @@ private fun singleEntryDiaryClient(entry: VoiceDiaryEntry): DiaryClient {
 		every { entryFlow(entry.id) } returns MutableStateFlow(entry)
 		everySuspend { deleteEntry(entry.id) } calls { _ -> entriesFlow.value = persistentListOf() }
 		everySuspend { getAudio(entry.id) } returns byteArrayOf(0)
+		everySuspend { updateTranscription(entry.id, any()) } returns Unit
 	}
 }
 
