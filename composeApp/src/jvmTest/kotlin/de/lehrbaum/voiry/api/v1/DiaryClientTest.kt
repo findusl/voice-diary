@@ -17,6 +17,8 @@ import io.ktor.client.plugins.sse.SSE
 import io.ktor.http.HttpStatusCode
 import io.ktor.serialization.kotlinx.json.json
 import io.ktor.server.application.install
+import io.ktor.server.engine.embeddedServer
+import io.ktor.server.netty.Netty
 import io.ktor.server.response.respond
 import io.ktor.server.response.respondBytes
 import io.ktor.server.routing.delete
@@ -40,7 +42,6 @@ import kotlin.time.ExperimentalTime
 import kotlin.time.Instant
 import kotlin.uuid.ExperimentalUuidApi
 import kotlin.uuid.Uuid
-import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -50,6 +51,7 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.job
+import kotlinx.coroutines.runBlocking
 import io.ktor.server.plugins.contentnegotiation.ContentNegotiation as ServerContentNegotiation
 
 @OptIn(ExperimentalTime::class, ExperimentalUuidApi::class)
@@ -64,18 +66,18 @@ class DiaryClientTest {
 
 	@Test
 	fun `client receives updates and handles duplicates`() =
-		testApplication {
+		runBlocking {
 			val service = DiaryServiceImpl.create(DiaryRepository(Files.createTempDirectory("clientTest1")))
-			application { module(service) }
-
-			createDiaryClientAgainstMockKtorApplication().use { client: DiaryClient ->
-				val entry = sampleEntry(Uuid.random())
-				val entriesDeferred = CoroutineScope(Dispatchers.Default).async {
-					client.entries.filter { it.isNotEmpty() }.first()
+			withLiveServer(service) { baseUrl ->
+				DiaryClientImpl(baseUrl, audioCache = audioCache).use { client ->
+					val entry = sampleEntry(Uuid.random())
+					val entriesDeferred = async(Dispatchers.Default) {
+						client.entries.filter { it.isNotEmpty() }.first()
+					}
+					service.addEntry(entry, ByteArray(0))
+					val entries = entriesDeferred.await()
+					assertEquals(1, entries.size)
 				}
-				service.addEntry(entry, ByteArray(0))
-				val entries = entriesDeferred.await()
-				assertEquals(1, entries.size)
 			}
 		}
 
@@ -110,7 +112,7 @@ class DiaryClientTest {
 
 	@Test
 	fun `client reconnects after drop`() =
-		testApplication {
+		runBlocking {
 			val entry1 = sampleEntry(Uuid.random())
 			val entry2 = sampleEntry(Uuid.random())
 			val sourceOfContinuousEvents = MutableSharedFlow<DiaryEvent>(replay = 1)
@@ -131,12 +133,12 @@ class DiaryClientTest {
 						}
 				}
 			}
-			application { module(service) }
-
-			createDiaryClientAgainstMockKtorApplication().use { client: DiaryClient ->
-				// should have all events from the second call after reconnect
-				val ids = client.entries.filter { it.size > 1 }.first().map { it.id }
-				assertTrue(ids.containsAll(listOf(entry1.id, entry2.id)))
+			withLiveServer(service) { baseUrl ->
+				DiaryClientImpl(baseUrl, audioCache = audioCache).use { client ->
+					// should have all events from the second call after reconnect
+					val ids = client.entries.filter { it.size > 1 }.first().map { it.id }
+					assertTrue(ids.containsAll(listOf(entry1.id, entry2.id)))
+				}
 			}
 		}
 
@@ -410,6 +412,16 @@ class DiaryClientTest {
 			},
 			audioCache = audioCache,
 		)
+
+	private suspend fun withLiveServer(service: DiaryService, block: suspend (String) -> Unit) {
+		val server = embeddedServer(Netty, port = 0, host = "127.0.0.1") { module(service) }.start()
+		try {
+			val port = server.engine.resolvedConnectors().single().port
+			block("http://127.0.0.1:$port")
+		} finally {
+			server.stop(0, 0)
+		}
+	}
 
 	private fun sampleEntry(id: Uuid) =
 		VoiceDiaryEntry(
